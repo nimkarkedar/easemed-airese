@@ -39,12 +39,16 @@ const SLIDES: Slide[] = [
   },
 ];
 
-// Measured from Figma "iPhone 16 & 17 Pro - 2/3/4" (402 pt wide), kept proportional to screen width.
-// Circle is 88% of the Figma size (556 pt), leaving room for the text at the 16 pt base size.
-const CIRCLE = (556 * 0.88) / 402; // diameter
-const CIRCLE_TOP = 12;
-const CIRCLE_SHIFT = (116 * 0.88) / 402; // how far the circle moves per page (scaled with the circle)
-const TEXT_GAP = 50; // circle bottom to headline
+// Layout is designed on the Figma frame "iPhone 16 & 17 Pro - 2/3/4" (402 × 874 pt) and scales
+// with the viewport: the circle and spacing follow the screen's height, capped by its width.
+// Text stays on the type scale (never shrinks below the 16 pt base); it follows the system text size.
+const REF_W = 402;
+const REF_H = 874;
+const REF_CIRCLE = 556 * 0.88; // circle diameter on the reference frame (88% of the Figma 556 pt)
+const REF_TOP = 12; // circle top
+const REF_GAP = 50; // circle bottom to headline
+const SHIFT_RATIO = 116 / 556; // how far the circle moves per page, relative to its size
+const TEXT_MIN = 260; // room always kept below the circle for headline, body, Continue and the home indicator
 const DASH_H = 4;
 const DASH_W = 28;
 const TARGET = 44; // minimum touch target (WCAG 2.5.5 AAA): each dash sits in a 44 × 44 tap area
@@ -62,23 +66,32 @@ const native = motion.useNativeDriver;
  */
 export function OnboardingScreen({ onContinue }: { onContinue?: () => void }) {
   // Sized from the screen's own layout (not the window), so it's right in split view and in the preview frame.
-  const [width, setWidth] = useState(0);
-  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+  const [box, setBox] = useState({ width: 0, height: 0 });
+  const onLayout = (e: LayoutChangeEvent) => setBox({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height });
   return (
     <View style={styles.root} onLayout={onLayout}>
       <StatusBar style="light" />
-      {width > 0 && <Carousel width={width} onContinue={onContinue} />}
+      {box.width > 0 && <Carousel width={box.width} height={box.height} onContinue={onContinue} />}
     </View>
   );
 }
 
-function Carousel({ width, onContinue }: { width: number; onContinue?: () => void }) {
+function Carousel({ width, height, onContinue }: { width: number; height: number; onContinue?: () => void }) {
   const scrollX = useRef(new Animated.Value(0)).current;
   const scroller = useRef<ScrollView>(null);
   const reduced = useReducedMotion(); // Reduce Motion: no drift, parallax or breathing; fades stay
 
-  const size = width * CIRCLE;
-  const shift = reduced ? 0 : width * CIRCLE_SHIFT;
+  // Viewport scaling: v is this screen's height relative to the reference frame.
+  const v = height / REF_H;
+  const top = REF_TOP * v;
+  const gap = Math.max(space.xl, REF_GAP * v);
+  const size = Math.min(
+    REF_CIRCLE * v, // follow the height
+    (REF_CIRCLE / REF_W) * width, // but never wider than the design allows
+    height - top - gap - TEXT_MIN, // and always leave room for the text
+  );
+  const textTop = top + size + gap;
+  const shift = reduced ? 0 : size * SHIFT_RATIO;
   const parallax = reduced ? 0 : PARALLAX;
   const pages = SLIDES.map((_, i) => i * width);
 
@@ -161,7 +174,7 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
             width: size,
             height: size,
             borderRadius: size / 2,
-            top: CIRCLE_TOP,
+            top,
             left: (width - size) / 2,
             transform: [{ translateX: byPage(SLIDES.map((_, i) => shift * (1 - i))) }],
           },
@@ -223,7 +236,7 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
       >
         {SLIDES.map((slide, i) => (
           <View key={i} style={{ width }}>
-            <Animated.View style={[styles.text, { marginTop: CIRCLE_TOP + size + TEXT_GAP, opacity: onPage(i) }]}>
+            <Animated.View style={[styles.text, { marginTop: textTop, opacity: onPage(i) }]}>
               <View style={styles.titleRow}>
                 <AppText variant="headline" accessibilityRole="header" style={styles.title}>
                   {slide.title}
@@ -254,7 +267,7 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
       </Animated.ScrollView>
 
       {/* Page indicator, just above the headline: one dash per page, the current one lit. Tap to jump. */}
-      <View style={[styles.dashes, { top: CIRCLE_TOP + size + TEXT_GAP - space.xl - DASH_H - (TARGET - DASH_H) / 2 }]}>
+      <View style={[styles.dashes, { top: textTop - space.xl - DASH_H - (TARGET - DASH_H) / 2 }]}>
         {SLIDES.map((_, i) => (
           <Pressable
             key={i}
