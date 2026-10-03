@@ -27,6 +27,7 @@ npm run preview       # writes preview-dist/index.html
 | `src/components/` | Shared parts: `AppText`, `Screen`, `Button`, `Card`. |
 | `src/screens/` | One file per screen. |
 | `src/app/` | Routes (expo-router). Thin files that point at screens. |
+| `src/lib/` | Non-UI logic, e.g. `permissions.ts` (system prompts). `.web.ts` files are browser-preview stand-ins. |
 | `preview/`, `scripts/` | Browser preview only. Not shipped in the app. |
 
 ## Rules

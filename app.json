@@ -29,7 +29,13 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Airese listens while you sleep to capture snoring and breathing. Recordings stay on your device unless you choose to share them."
+        }
+      ]
     ]
   }
 }

@@ -1,0 +1,20 @@
+/**
+ * Browser preview only: browsers can't show the iOS / Android permission prompts,
+ * so we show a simulated iOS alert (see SystemAlertHost) with the same wording.
+ * The real app uses permissions.ts.
+ */
+import { showSystemAlert } from '../components/SystemAlertHost';
+
+export function requestMicrophone(): Promise<boolean> {
+  return showSystemAlert({
+    title: '“Airese” Would Like to Access the Microphone',
+    message: 'Airese listens while you sleep to capture snoring and breathing. Recordings stay on your device unless you choose to share them.',
+  });
+}
+
+export function requestNotifications(): Promise<boolean> {
+  return showSystemAlert({
+    title: '“Airese” Would Like to Send You Notifications',
+    message: 'Notifications may include alerts, sounds and icon badges. These can be configured in Settings.',
+  });
+}
