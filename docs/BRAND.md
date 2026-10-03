@@ -237,7 +237,7 @@ Also: `ambient` (9 s sine loop, for background breathing) and `stagger` (350 ms 
 | Splash: logo and subtext arriving, falling away | slow |
 | Onboarding: illustration fading in | slow |
 | Onboarding: Continue fading in / hiding on swipe back | slow / fast |
-| Bottom sheet: appearing / closing | fast / slow |
+| Bottom sheet: appearing and closing | fast |
 | Bottom sheet: settling back after a short drag | fast |
 
 Overlap steps instead of chaining them, so motion flows. Swipes and scrolls follow the finger, with no easing. Respect the system Reduce Motion setting.

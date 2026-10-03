@@ -13,7 +13,7 @@ const DISMISS_VELOCITY = 0.8;
  * Render it last inside the screen's root view; it overlays that screen
  * (no native Modal, so it also stays inside the browser preview's phone frame).
  * Opens: backdrop fades in while the sheet glides up (fast ease-out).
- * Closes: tap the backdrop, or drag the sheet down; it drifts away (slow ease-in).
+ * Closes: tap the backdrop, or drag the sheet down; it drifts away (fast ease-in).
  */
 export function BottomSheet({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) {
   const { height } = useWindowDimensions();
@@ -28,7 +28,7 @@ export function BottomSheet({ visible, onClose, children }: { visible: boolean; 
       drag.setValue(0);
       Animated.timing(progress, { toValue: 1, duration: motion.fast.duration, easing: motion.fast.easeOut, useNativeDriver: native }).start();
     } else if (mounted) {
-      Animated.timing(progress, { toValue: 0, duration: motion.slow.duration, easing: motion.slow.easeIn, useNativeDriver: native }).start(
+      Animated.timing(progress, { toValue: 0, duration: motion.fast.duration, easing: motion.fast.easeIn, useNativeDriver: native }).start(
         ({ finished }) => finished && setMounted(false),
       );
     }
