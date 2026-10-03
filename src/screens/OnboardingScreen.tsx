@@ -53,7 +53,7 @@ const DASH_H = 4;
 const DASH_W = 28;
 const TARGET = 44; // minimum touch target (WCAG 2.5.5 AAA): each dash sits in a 44 × 44 tap area
 const PARALLAX = 40; // how far each illustration slides inside the circle between pages
-const SIDE = space.gutter * 2; // text and indicator inset
+const SIDE = space.gutter; // standard screen edge
 
 const native = motion.useNativeDriver;
 
@@ -276,8 +276,7 @@ const styles = StyleSheet.create({
   circle: { position: 'absolute', overflow: 'hidden', pointerEvents: 'none' }, // no fill: artwork fades in straight from the background
   center: { alignItems: 'center', justifyContent: 'center' },
   text: { paddingHorizontal: SIDE },
-  // Icon sits a little closer to the edge than the text inset (Figma: 32 pt from the right).
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginRight: space.xxl - SIDE },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   title: { flex: 1 },
   dashes: { position: 'absolute', left: SIDE - (TARGET - DASH_W) / 2, flexDirection: 'row' },
   dashTarget: { width: TARGET, height: TARGET, alignItems: 'center', justifyContent: 'center' },

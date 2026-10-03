@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, BackHandler, PanResponder, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, BackHandler, Modal, PanResponder, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { colors, motion, radius, space, useInsets, useReducedMotion } from '../theme';
 
 const native = motion.useNativeDriver;
@@ -10,8 +10,8 @@ const DISMISS_VELOCITY = 0.8;
 /**
  * Floating bottom sheet over a dimmed screen: inset from the edges, all corners
  * rounded, sitting just above the home indicator.
- * Render it last inside the screen's root view; it overlays that screen
- * (no native Modal, so it also stays inside the browser preview's phone frame).
+ * Opens above everything, including the tab bar: in a native Modal on iOS / Android, and on web
+ * in a portal at the app root (#root), which keeps it inside the browser preview's phone frame.
  * Opens: backdrop fades in while the sheet glides up (fast ease-out).
  * Closes: tap the backdrop, or drag the sheet down; it drifts away (fast ease-in).
  */
@@ -58,7 +58,7 @@ export function BottomSheet({ visible, onClose, children }: { visible: boolean; 
 
   if (!mounted) return null;
 
-  return (
+  const content = (
     <View style={[StyleSheet.absoluteFill, styles.layer]}>
       <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: progress }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
@@ -83,10 +83,21 @@ export function BottomSheet({ visible, onClose, children }: { visible: boolean; 
       </Animated.View>
     </View>
   );
+
+  if (Platform.OS === 'web') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createPortal } = require('react-dom') as { createPortal: (node: React.ReactNode, el: Element) => React.ReactPortal };
+    return createPortal(content, document.getElementById('root') ?? document.body);
+  }
+  return (
+    <Modal transparent visible animationType="none" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
+      {content}
+    </Modal>
+  );
 }
 
 const styles = StyleSheet.create({
-  layer: { zIndex: 10 },
+  layer: { zIndex: 50 },
   backdrop: { backgroundColor: colors.scrim },
   sheet: {
     position: 'absolute',

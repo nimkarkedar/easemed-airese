@@ -203,27 +203,30 @@ Easmed's medical B2B tools and Airese show the same data, but they're built diff
 | Breath | `#9DB4FF` | Cool accent: breathing data, links |
 | Lamp | `#F4B65F` | **The one warm light.** Use sparingly for the key number or the action. |
 
-Lamp is the only warm colour. **No red** (calm, never alarming).
+Lamp is the only warm colour. **Red is for form errors only** (`error` `#FFB4AB`, Material 3's dark-theme error colour, 11.2:1 on Midnight). It's never used for sleep data or results, which stay calm, never alarming.
 
 ### Type
 
 | Use | Font |
 | --- | --- |
-| Headings | **Montserrat** (bold) |
+| Headings | **Montserrat** (semibold) |
+| Buttons | **Montserrat** (medium) |
 | Body | **Inter** |
 | Data (times, durations) | **Monospace**, often in Lamp: `2:14 am · 42 min` |
+
+**Screen edges:** one standard side inset of **20 pt** on every screen (`space.gutter`). Cards and controls sit inside it.
 
 **Type scale** (`type` in `src/theme/tokens.ts`). The base is 16 and the steps are about 1.25×. Reading text has a line height of at least 1.5×. **No text smaller than 12.**
 
 | Style | Size / line height | Weight | Use |
 | --- | --- | --- | --- |
-| `title` | 32 / 40 | Bold | Rare, big single statements |
-| `headline` | 24 / 32 | Bold | Screen headline (onboarding) |
-| `heading` | 20 / 28 | Bold | Section and sheet titles |
+| `title` | 32 / 40 | SemiBold | Rare, big single statements |
+| `headline` | 24 / 32 | SemiBold | Screen headline (onboarding) |
+| `heading` | 20 / 28 | SemiBold | Section and sheet titles |
 | `body` | **16 / 24** | Regular | Base: all reading text |
 | `small` | 14 / 22 | Regular | Secondary detail |
 | `caption` | 12 / 18 | Regular | The minimum: credits, fine print |
-| `button` | 16 / 20 | Bold | Button labels |
+| `button` | 16 / 20 | Medium | Button labels (Midnight on Breath, 9.4:1) |
 
 ### Accessibility: WCAG 2.2 AAA
 
@@ -251,6 +254,7 @@ The design system targets **WCAG 2.2 Level AAA**. Every new screen must keep to 
 | Moon caption on splash gradient | 10.5 : 1 (5.1 at the brightest blue) | 7 |
 | Inactive page dash (Moon at 45%) | 4.1 : 1 | 3 |
 | Info icon, sheet handle | 7.6 : 1 or more | 3 |
+| Error red on Midnight / on Deep | 11.2 : 1 / 8.4 : 1 | 7 |
 
 ### Icons
 

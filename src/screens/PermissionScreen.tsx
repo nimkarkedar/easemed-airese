@@ -6,7 +6,7 @@ import { requestMicrophone, requestNotifications } from '../lib/permissions';
 import { colors, space, useInsets } from '../theme';
 
 const ART = 200; // graphic size (pt)
-const SIDE = space.gutter * 2; // text inset, same as onboarding
+const SIDE = space.gutter; // standard screen edge
 
 type Props = {
   art: ImageSourcePropType;

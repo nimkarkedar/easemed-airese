@@ -1,8 +1,8 @@
 /**
  * Airese design tokens (kept minimal: add only when a screen needs it).
  * Source: docs/BRAND.md (Voice & Tone and Visual Language decks, Oct 2026).
- *  - Night-appropriate dark UI, with one warm light. No red: calm, never alarming.
- *  - Montserrat: bold to scan, regular to read.
+ *  - Night-appropriate dark UI, with one warm light. Red only for form errors, never for sleep data.
+ *  - Montserrat: semibold to scan (headings), medium to act (buttons), regular to read.
  */
 import { Platform, type TextStyle } from 'react-native';
 
@@ -21,11 +21,13 @@ export const colors = {
   ...palette,
   // Roles: screens use these
   background: palette.midnight,
-  surface: palette.deep, // cards
+  surface: palette.deep, // cards, sheets, form groups
+  divider: 'rgba(179, 189, 211, 0.18)', // hairlines between form rows (Mist at 18%)
   text: palette.moon,
   textMuted: palette.mist,
   accent: palette.breath, // primary buttons, links
   onAccent: palette.midnight, // text on accent (white on Breath is too low-contrast)
+  error: '#FFB4AB', // form errors only (Material 3 dark error, tone 80). Never for sleep results: calm, not alarming
   brand: '#2E3A5A', // Airese navy (logo, decks). Role in the dark UI still open: see BRAND.md §5
   white: '#FFFFFF', // logo on the splash gradient
   scrim: 'rgba(5, 7, 15, 0.7)', // Night at 70%: dims the screen behind sheets
@@ -53,21 +55,24 @@ export const space = {
   lg: 16,
   xl: 24,
   xxl: 32,
-  gutter: 20, // screen edges
+  gutter: 20, // screen edges: the one side inset for every screen (iOS standard)
 } as const;
 
 export const radius = {
   md: 12,
-  lg: 16, // cards
+  lg: 16, // cards, form groups
+  xl: 20, // banners
   pill: 999, // buttons
-  sheet: 28, // bottom sheet top corners
+  sheet: 28, // bottom sheet corners
 } as const;
 
 /* One loaded font file per weight (see src/app/_layout.tsx).
    On web, plain "Montserrat" is the fallback used by the shared preview link. */
-type Weight = '400' | '700';
+type Weight = '400' | '500' | '600' | '700';
 const nativeFamily: Record<Weight, string> = {
   '400': 'Montserrat_400Regular',
+  '500': 'Montserrat_500Medium',
+  '600': 'Montserrat_600SemiBold',
   '700': 'Montserrat_700Bold',
 };
 const font = (w: Weight): TextStyle =>
@@ -81,13 +86,13 @@ const font = (w: Weight): TextStyle =>
  *   12 · 14 · 16 · 20 · 24 · 32
  */
 export const type = {
-  title: { ...font('700'), fontSize: 32, lineHeight: 40 }, // rare: big single statements
-  headline: { ...font('700'), fontSize: 24, lineHeight: 32 }, // screen headline (onboarding)
-  heading: { ...font('700'), fontSize: 20, lineHeight: 28 }, // section and sheet titles
+  title: { ...font('600'), fontSize: 32, lineHeight: 40 }, // rare: big single statements
+  headline: { ...font('600'), fontSize: 24, lineHeight: 32 }, // screen headline (onboarding)
+  heading: { ...font('600'), fontSize: 20, lineHeight: 28 }, // section and sheet titles
   body: { ...font('400'), fontSize: 16, lineHeight: 24 }, // base: all reading text
   small: { ...font('400'), fontSize: 14, lineHeight: 22 }, // secondary detail
   caption: { ...font('400'), fontSize: 12, lineHeight: 18 }, // the minimum: credits, fine print
-  button: { ...font('700'), fontSize: 16, lineHeight: 20 },
+  button: { ...font('500'), fontSize: 16, lineHeight: 20 }, // medium: calmer than bold
 } satisfies Record<string, TextStyle>;
 
 export type TypeVariant = keyof typeof type;
