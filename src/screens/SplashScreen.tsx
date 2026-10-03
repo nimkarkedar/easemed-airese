@@ -29,10 +29,10 @@ export function SplashScreen({ onFinish }: { onFinish?: () => void }) {
 
   // Intro: logo rises in; the subtext follows while the logo is still settling (overlapped, not chained).
   useEffect(() => {
-    const enter = { easing: motion.easing.enter, useNativeDriver: native };
+    const enter = { duration: motion.slow.duration, easing: motion.slow.easeOut, useNativeDriver: native };
     Animated.parallel([
-      Animated.timing(logoIn, { toValue: 1, duration: motion.duration.slow, delay: motion.stagger, ...enter }),
-      Animated.timing(subtextIn, { toValue: 1, duration: motion.duration.base, delay: motion.stagger * 3, ...enter }),
+      Animated.timing(logoIn, { toValue: 1, delay: motion.stagger, ...enter }),
+      Animated.timing(subtextIn, { toValue: 1, delay: motion.stagger * 3, ...enter }),
     ]).start();
   }, [logoIn, subtextIn]);
 
@@ -46,9 +46,9 @@ export function SplashScreen({ onFinish }: { onFinish?: () => void }) {
       if (reduceMotion) return onFinish();
       Animated.timing(fall, {
         toValue: 1,
-        duration: motion.duration.slow,
+        duration: motion.slow.duration,
         // Glides down and away: soft start, soft finish as it leaves the screen.
-        easing: motion.easing.move,
+        easing: motion.slow.easeInOut,
         useNativeDriver: native,
       }).start(({ finished }) => finished && !cancelled && onFinish());
     }, HOLD_MS);

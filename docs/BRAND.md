@@ -219,21 +219,26 @@ Lamp is the only warm colour. **No red** (calm, never alarming).
 
 ### Motion
 
-**One calm, unhurried pace for the whole app**, like settling down for the night. Things arrive gently and come to rest softly, leave with a little weight, and travel smoothly. Nothing snaps, bounces or overshoots.
+**One calm, unhurried feel for the whole app**, like settling down for the night. Every curve starts softly and lands softly. Nothing snaps, bounces or overshoots.
 
-Every animation uses the tokens in `src/theme/motion.ts`. Don't hand-tune timings per screen.
+There are two presets in `src/theme/motion.ts`. Every animation uses one of them; don't hand-tune timings per screen. Design decides which preset applies where.
 
-| Token | Value | Use |
-| --- | --- | --- |
-| `duration.fast` | 450 ms | Getting out of the way (hiding what the user moved past) |
-| `duration.base` | 1000 ms | Default: fades, small reveals |
-| `duration.slow` | 1400 ms | Big moments: logo arriving, splash falling away |
-| `duration.ambient` | 9000 ms | One in-and-out of an ambient "breath" |
-| `easing.enter` | cubic-bezier(0.3, 0, 0.2, 1) | Arriving: soft start, long gentle settle |
-| `easing.exit` | cubic-bezier(0.47, 0, 0.745, 0.715) | Leaving: drifts off, gradually gathering pace |
-| `easing.move` | cubic-bezier(0.37, 0, 0.63, 1) | Gliding between two resting states |
-| `easing.ambient` | sine in-out | Looping background motion |
-| `stagger` | 350 ms | Offset between overlapping elements |
+| Preset | Duration | easeOut (arriving) | easeIn (leaving) | easeInOut (between states) |
+| --- | --- | --- | --- | --- |
+| **slow**: elegant, smooth | 1200 ms | cubic-bezier(0.3, 0, 0.2, 1) | cubic-bezier(0.47, 0, 0.745, 0.715) | cubic-bezier(0.37, 0, 0.63, 1) |
+| **fast**: a little snappier | 500 ms | cubic-bezier(0.2, 0, 0, 1) | cubic-bezier(0.4, 0, 0.8, 0.4) | cubic-bezier(0.45, 0, 0.2, 1) |
+
+Also: `ambient` (9 s sine loop, for background breathing) and `stagger` (350 ms offset between overlapping elements).
+
+**Where each is used so far**
+
+| Animation | Preset |
+| --- | --- |
+| Splash: logo and subtext arriving, falling away | slow |
+| Onboarding: illustration fading in | slow |
+| Onboarding: Continue fading in / hiding on swipe back | slow / fast |
+| Bottom sheet: appearing / closing | fast / slow |
+| Bottom sheet: settling back after a short drag | fast |
 
 Overlap steps instead of chaining them, so motion flows. Swipes and scrolls follow the finger, with no easing. Respect the system Reduce Motion setting.
 

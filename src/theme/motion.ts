@@ -1,37 +1,36 @@
 /**
- * Airese motion: one calm, unhurried pace for the whole app.
- * Every animation uses these durations and curves; don't hand-tune per screen.
+ * Airese motion. Two presets, one feel: like settling down for the night.
+ * Every animation uses one of these presets; don't hand-tune per screen.
  *
- * Feel: like settling down for the night. Unhurried: every curve starts
- * softly (no snap at the start) and lands softly (long, gentle settle).
- * Things arrive slowly (enter), drift away (exit) and glide between states
- * (move). Overlap steps rather than chaining them, so it flows instead of ticking.
- * Nothing snaps, bounces or overshoots.
+ *   slow: elegant and smooth. Soft start, long gentle settle.
+ *   fast: the same character, a little snappier, for quick feedback and getting out of the way.
+ *
+ * Each preset has a duration and three curves:
+ *   easeOut   arriving (comes in, settles into place)
+ *   easeIn    leaving (drifts off, gathering pace)
+ *   easeInOut moving between two resting states
+ *
+ * Overlap steps rather than chaining them (use `stagger`), so motion flows.
+ * Nothing snaps, bounces or overshoots. Swipes and scrolls follow the finger.
  */
 import { Easing, Platform } from 'react-native';
 
 export const motion = {
-  duration: {
-    /** Getting out of the way: hiding something the user just moved past. */
-    fast: 450,
-    /** Default: fades, small reveals (a button appearing, text changing). */
-    base: 1000,
-    /** Big or meaningful moments: the logo arriving, the splash falling away. */
-    slow: 1400,
-    /** Background life: one full in-and-out of an ambient "breath". */
-    ambient: 9000,
+  slow: {
+    duration: 1200,
+    easeOut: Easing.bezier(0.3, 0, 0.2, 1),
+    easeIn: Easing.bezier(0.47, 0, 0.745, 0.715),
+    easeInOut: Easing.bezier(0.37, 0, 0.63, 1),
   },
-  easing: {
-    /** Arriving: eases in softly, then a long gentle settle (soft ease-out). */
-    enter: Easing.bezier(0.3, 0, 0.2, 1),
-    /** Leaving: drifts off, gradually gathering pace (ease-in sine). */
-    exit: Easing.bezier(0.47, 0, 0.745, 0.715),
-    /** Gliding between two resting states (ease-in-out sine). */
-    move: Easing.bezier(0.37, 0, 0.63, 1),
-    /** Looping ambient motion: a sine wave, like breathing. */
-    ambient: Easing.inOut(Easing.sin),
+  fast: {
+    duration: 500,
+    easeOut: Easing.bezier(0.2, 0, 0, 1),
+    easeIn: Easing.bezier(0.4, 0, 0.8, 0.4),
+    easeInOut: Easing.bezier(0.45, 0, 0.2, 1),
   },
-  /** Brief pause before a follow-on element, so things arrive in sequence, not all at once. */
+  /** Looping background life: one full in-and-out of a "breath". */
+  ambient: { duration: 9000, easing: Easing.inOut(Easing.sin) },
+  /** Offset before a follow-on element, so things arrive in sequence, not all at once. */
   stagger: 350,
   /** The native driver isn't available on web (browser preview only). */
   useNativeDriver: Platform.OS !== 'web',

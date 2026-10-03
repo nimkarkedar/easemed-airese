@@ -88,9 +88,9 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
   useEffect(() => {
     Animated.timing(artIn, {
       toValue: 1,
-      duration: motion.duration.slow,
+      duration: motion.slow.duration,
       delay: motion.stagger,
-      easing: motion.easing.enter,
+      easing: motion.slow.easeOut,
       useNativeDriver: native,
     }).start();
   }, [artIn]);
@@ -98,7 +98,7 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
   // Ambient motion: the scene breathes very slowly (slight scale and float), always on.
   const breath = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const half = { duration: motion.duration.ambient / 2, easing: motion.easing.ambient, useNativeDriver: native };
+    const half = { duration: motion.ambient.duration / 2, easing: motion.ambient.easing, useNativeDriver: native };
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(breath, { toValue: 1, ...half }),
@@ -131,9 +131,9 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
     Animated.timing(continueIn, {
       toValue: atLast ? 1 : 0,
       // Fades in once the page is still; gets out of the way quickly when you swipe back.
-      duration: atLast ? motion.duration.base : motion.duration.fast,
+      duration: atLast ? motion.slow.duration : motion.fast.duration,
       delay: atLast ? motion.stagger : 0,
-      easing: atLast ? motion.easing.enter : motion.easing.exit,
+      easing: atLast ? motion.slow.easeOut : motion.fast.easeIn,
       useNativeDriver: native,
     }).start();
   }, [atLast, continueIn]);
