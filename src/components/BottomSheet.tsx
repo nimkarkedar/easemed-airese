@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, BackHandler, PanResponder, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { colors, motion, radius, space, useInsets } from '../theme';
+import { colors, motion, radius, space, useInsets, useReducedMotion } from '../theme';
 
 const native = motion.useNativeDriver;
 /** Drag further than this, or flick down faster than this, to dismiss. */
@@ -18,6 +18,7 @@ const DISMISS_VELOCITY = 0.8;
 export function BottomSheet({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) {
   const { height } = useWindowDimensions();
   const insets = useInsets();
+  const reduced = useReducedMotion(); // Reduce Motion: sheet fades instead of sliding
   const [mounted, setMounted] = useState(visible);
   const progress = useRef(new Animated.Value(0)).current; // 0 hidden, 1 open
   const drag = useRef(new Animated.Value(0)).current; // finger offset while dragging down
@@ -69,8 +70,9 @@ export function BottomSheet({ visible, onClose, children }: { visible: boolean; 
           styles.sheet,
           {
             bottom: Math.max(space.xl, insets.bottom - space.sm),
+            opacity: reduced ? progress : 1,
             transform: [
-              { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [height, 0] }) },
+              { translateY: reduced ? 0 : progress.interpolate({ inputRange: [0, 1], outputRange: [height, 0] }) },
               { translateY: drag },
             ],
           },
@@ -102,8 +104,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 5,
     borderRadius: 3,
-    backgroundColor: colors.textMuted,
-    opacity: 0.4,
+    backgroundColor: colors.textMuted, // full strength: 3:1+ against the sheet (WCAG 1.4.11)
     marginBottom: space.xl,
   },
 });

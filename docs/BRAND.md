@@ -198,7 +198,7 @@ Easmed's medical B2B tools and Airese show the same data, but they're built diff
 | Night | `#05070F` | Deepest background |
 | Midnight | `#0B1020` | App background |
 | Deep | `#19294E` | Cards and sheets (deck had `#131B2E`; changed by design, Oct 2026) |
-| Mist | `#93A0BB` | Secondary and muted text |
+| Mist | `#B3BDD3` | Secondary and muted text (deck had `#93A0BB`; lightened to pass WCAG AAA) |
 | Moon | `#EEF1F7` | Primary text |
 | Breath | `#9DB4FF` | Cool accent: breathing data, links |
 | Lamp | `#F4B65F` | **The one warm light.** Use sparingly for the key number or the action. |
@@ -212,6 +212,45 @@ Lamp is the only warm colour. **No red** (calm, never alarming).
 | Headings | **Montserrat** (bold) |
 | Body | **Inter** |
 | Data (times, durations) | **Monospace**, often in Lamp: `2:14 am · 42 min` |
+
+**Type scale** (`type` in `src/theme/tokens.ts`). The base is 16 and the steps are about 1.25×. Reading text has a line height of at least 1.5×. **No text smaller than 12.**
+
+| Style | Size / line height | Weight | Use |
+| --- | --- | --- | --- |
+| `title` | 32 / 40 | Bold | Rare, big single statements |
+| `headline` | 24 / 32 | Bold | Screen headline (onboarding) |
+| `heading` | 20 / 28 | Bold | Section and sheet titles |
+| `body` | **16 / 24** | Regular | Base: all reading text |
+| `small` | 14 / 22 | Regular | Secondary detail |
+| `caption` | 12 / 18 | Regular | The minimum: credits, fine print |
+| `button` | 16 / 20 | Bold | Button labels |
+
+### Accessibility: WCAG 2.2 AAA
+
+The design system targets **WCAG 2.2 Level AAA**. Every new screen must keep to these rules.
+
+- **Text contrast of at least 7:1**, and 4.5:1 for large text (24 regular or 19 bold and up). Use the colour roles; they're checked.
+- **Icons, controls and state indicators: at least 3:1** against what's behind them.
+- **Touch targets of at least 44 × 44 pt.** If the visible mark is smaller, pad the tap area, as the page dashes do.
+- **No text smaller than 12.** Reading text has a line height of at least 1.5×.
+- **Text scales with the system setting up to 200%** (`AppText` allows ×2). Layouts must grow, not clip.
+- **Reduce Motion is respected** (`useReducedMotion`): no slides, drift, parallax or breathing. Fades stay.
+- **Every gesture has a tap alternative.** The carousel can be swiped, or moved with the dashes.
+- **Screen readers:** headlines are marked as headers, decorative art is hidden, and controls have labels and state (for example "Page 2 of 3, selected").
+- **Plain language** at a lower-secondary reading level (see Voice and tone).
+
+**Checked pairs**
+
+| Pair | Contrast | Needed |
+| --- | --- | --- |
+| Moon text on Midnight | 16.7 : 1 | 7 |
+| Moon text on Deep (sheet) | 12.6 : 1 | 7 |
+| Mist text on Midnight | 10.0 : 1 | 7 |
+| Mist text on Deep (sheet) | 7.6 : 1 | 7 |
+| Midnight label on Breath button | 9.4 : 1 | 7 |
+| Moon caption on splash gradient | 10.5 : 1 (5.1 at the brightest blue) | 7 |
+| Inactive page dash (Moon at 45%) | 4.1 : 1 | 3 |
+| Info icon, sheet handle | 7.6 : 1 or more | 3 |
 
 ### Icons
 

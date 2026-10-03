@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, View, type ImageSourcePropType, type LayoutChangeEvent } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AppText, BottomSheet, Button, InfoButton } from '../components';
-import { colors, motion, space } from '../theme';
+import { colors, motion, space, useReducedMotion } from '../theme';
 
 /**
  * Artwork shown inside the circle. Each source image is a square with the
@@ -40,11 +40,14 @@ const SLIDES: Slide[] = [
 ];
 
 // Measured from Figma "iPhone 16 & 17 Pro - 2/3/4" (402 pt wide), kept proportional to screen width.
-const CIRCLE = 556 / 402; // diameter
+// Circle is 88% of the Figma size (556 pt), leaving room for the text at the 16 pt base size.
+const CIRCLE = (556 * 0.88) / 402; // diameter
 const CIRCLE_TOP = 12;
-const CIRCLE_SHIFT = 116 / 402; // how far the circle moves per page
+const CIRCLE_SHIFT = (116 * 0.88) / 402; // how far the circle moves per page (scaled with the circle)
 const TEXT_GAP = 50; // circle bottom to headline
 const DASH_H = 4;
+const DASH_W = 28;
+const TARGET = 44; // minimum touch target (WCAG 2.5.5 AAA): each dash sits in a 44 × 44 tap area
 const PARALLAX = 40; // how far each illustration slides inside the circle between pages
 const SIDE = space.gutter * 2; // text and indicator inset
 
@@ -72,9 +75,11 @@ export function OnboardingScreen({ onContinue }: { onContinue?: () => void }) {
 function Carousel({ width, onContinue }: { width: number; onContinue?: () => void }) {
   const scrollX = useRef(new Animated.Value(0)).current;
   const scroller = useRef<ScrollView>(null);
+  const reduced = useReducedMotion(); // Reduce Motion: no drift, parallax or breathing; fades stay
 
   const size = width * CIRCLE;
-  const shift = width * CIRCLE_SHIFT;
+  const shift = reduced ? 0 : width * CIRCLE_SHIFT;
+  const parallax = reduced ? 0 : PARALLAX;
   const pages = SLIDES.map((_, i) => i * width);
 
   // Value per page → interpolated while swiping between pages.
@@ -95,9 +100,13 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
     }).start();
   }, [artIn]);
 
-  // Ambient motion: the scene breathes very slowly (slight scale and float), always on.
+  // Ambient motion: the scene breathes very slowly (slight scale and float). Off with Reduce Motion.
   const breath = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (reduced) {
+      breath.setValue(0);
+      return;
+    }
     const half = { duration: motion.ambient.duration / 2, easing: motion.ambient.easing, useNativeDriver: native };
     const loop = Animated.loop(
       Animated.sequence([
@@ -107,7 +116,7 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
     );
     loop.start();
     return () => loop.stop();
-  }, [breath]);
+  }, [breath, reduced]);
 
   // Info sheet: which page's detail is open (null = closed).
   const [infoFor, setInfoFor] = useState<number | null>(null);
@@ -122,10 +131,14 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
   // Continue appears only once the last page has settled, and hides as soon as you swipe back.
   const last = SLIDES.length - 1;
   const [atLast, setAtLast] = useState(false);
+  const [page, setPage] = useState(0); // for screen readers: which page is current
   const continueIn = useRef(new Animated.Value(0)).current;
   const onScrollJS = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
-    const settled = Math.abs(e.nativeEvent.contentOffset.x - last * width) < 1;
+    const x = e.nativeEvent.contentOffset.x;
+    const settled = Math.abs(x - last * width) < 1;
     setAtLast((prev) => (prev === settled ? prev : settled));
+    const nearest = Math.round(x / width);
+    setPage((prev) => (prev === nearest ? prev : nearest));
   };
   useEffect(() => {
     Animated.timing(continueIn, {
@@ -173,6 +186,8 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
               <Animated.Image
                 key={i}
                 source={art.source}
+                accessible={false} // decorative: the text carries the meaning
+                importantForAccessibility="no"
                 resizeMode="cover"
                 style={{
                   position: 'absolute',
@@ -185,7 +200,7 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
                     {
                       translateX: scrollX.interpolate({
                         inputRange: [(i - 1) * width, i * width, (i + 1) * width],
-                        outputRange: [PARALLAX, 0, -PARALLAX],
+                        outputRange: [parallax, 0, -parallax],
                         extrapolate: 'clamp',
                       }),
                     },
@@ -210,12 +225,12 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
           <View key={i} style={{ width }}>
             <Animated.View style={[styles.text, { marginTop: CIRCLE_TOP + size + TEXT_GAP, opacity: onPage(i) }]}>
               <View style={styles.titleRow}>
-                <AppText variant="headline" style={styles.title}>
+                <AppText variant="headline" accessibilityRole="header" style={styles.title}>
                   {slide.title}
                 </AppText>
                 <InfoButton onPress={() => openInfo(i)} label={`More about: ${slide.title}`} />
               </View>
-              <AppText variant="subhead" color="textMuted" style={{ marginTop: space.sm }}>
+              <AppText variant="body" color="textMuted" style={{ marginTop: space.sm }}>
                 {slide.body}
               </AppText>
               {slide.showContinue && (
@@ -239,10 +254,18 @@ function Carousel({ width, onContinue }: { width: number; onContinue?: () => voi
       </Animated.ScrollView>
 
       {/* Page indicator, just above the headline: one dash per page, the current one lit. Tap to jump. */}
-      <View style={[styles.dashes, { top: CIRCLE_TOP + size + TEXT_GAP - space.xl - DASH_H }]}>
+      <View style={[styles.dashes, { top: CIRCLE_TOP + size + TEXT_GAP - space.xl - DASH_H - (TARGET - DASH_H) / 2 }]}>
         {SLIDES.map((_, i) => (
-          <Pressable key={i} onPress={() => goTo(i)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Page ${i + 1} of ${SLIDES.length}`}>
-            <Animated.View style={[styles.dash, { opacity: scrollX.interpolate({ inputRange: [(i - 1) * width, i * width, (i + 1) * width], outputRange: [0.3, 1, 0.3], extrapolate: 'clamp' }) }]} />
+          <Pressable
+            key={i}
+            onPress={() => goTo(i)}
+            style={styles.dashTarget}
+            accessibilityRole="button"
+            accessibilityLabel={`Page ${i + 1} of ${SLIDES.length}`}
+            accessibilityState={{ selected: page === i }}
+          >
+            {/* Inactive at 45% so it still reads at 3:1 against the background (WCAG 1.4.11) */}
+            <Animated.View style={[styles.dash, { opacity: scrollX.interpolate({ inputRange: [(i - 1) * width, i * width, (i + 1) * width], outputRange: [0.45, 1, 0.45], extrapolate: 'clamp' }) }]} />
           </Pressable>
         ))}
       </View>
@@ -266,6 +289,7 @@ const styles = StyleSheet.create({
   // Icon sits a little closer to the edge than the text inset (Figma: 32 pt from the right).
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginRight: space.xxl - SIDE },
   title: { flex: 1 },
-  dashes: { position: 'absolute', left: SIDE, flexDirection: 'row', gap: space.sm },
-  dash: { width: 20, height: DASH_H, borderRadius: DASH_H / 2, backgroundColor: colors.text },
+  dashes: { position: 'absolute', left: SIDE - (TARGET - DASH_W) / 2, flexDirection: 'row' },
+  dashTarget: { width: TARGET, height: TARGET, alignItems: 'center', justifyContent: 'center' },
+  dash: { width: DASH_W, height: DASH_H, borderRadius: DASH_H / 2, backgroundColor: colors.text },
 });

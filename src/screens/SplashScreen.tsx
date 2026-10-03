@@ -3,7 +3,7 @@ import { AccessibilityInfo, Animated, StyleSheet, View, type LayoutChangeEvent }
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { AppText, Logo } from '../components';
-import { colors, gradients, motion, space } from '../theme';
+import { colors, gradients, motion, space, useReducedMotion } from '../theme';
 
 /** Total time on screen before the exit starts (includes the intro). */
 const HOLD_MS = 3000;
@@ -23,6 +23,7 @@ const native = motion.useNativeDriver;
  */
 export function SplashScreen({ onFinish }: { onFinish?: () => void }) {
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const reduced = useReducedMotion();
   const logoIn = useRef(new Animated.Value(0)).current;
   const subtextIn = useRef(new Animated.Value(0)).current;
   const fall = useRef(new Animated.Value(0)).current; // 0 = in place, 1 = gone below the screen
@@ -85,14 +86,14 @@ export function SplashScreen({ onFinish }: { onFinish?: () => void }) {
           <Animated.View
             style={{
               opacity: logoIn,
-              transform: [{ translateY: logoIn.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
+              transform: [{ translateY: logoIn.interpolate({ inputRange: [0, 1], outputRange: [reduced ? 0 : 10, 0] }) }],
             }}
           >
             <Logo width={128} color="white" />
           </Animated.View>
 
           <Animated.View style={{ opacity: subtextIn, marginTop: space.sm }}>
-            <AppText variant="small" color="mist">
+            <AppText variant="caption" color="moon">
               Powered by The Air Station
             </AppText>
           </Animated.View>

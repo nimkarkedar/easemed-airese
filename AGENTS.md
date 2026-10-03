@@ -4,7 +4,7 @@ This is an Expo/React Native mobile application. Prioritize mobile-first pattern
 
 Airese (by Easmed) is a phone app that records the night, detects snoring and paused breathing, and helps people decide whether to get checked by a doctor.
 
-**Before designing any screen or writing any user-facing copy, read [docs/BRAND.md](docs/BRAND.md).** It holds the voice and tone rules (plain, factual, calm, useful; no diagnosing, no scary warnings), the escalation ladder, the night colour palette, type, and imagery. Copy and visuals must follow it. Every animation uses a motion preset from `src/theme/motion.ts` (`slow` or `fast`, each with a duration and easeOut/easeIn/easeInOut curves); never hard-code timings or curves. Icons are Material Symbols (Material 3, Outlined) via the `Icon` component only.
+**Before designing any screen or writing any user-facing copy, read [docs/BRAND.md](docs/BRAND.md).** It holds the voice and tone rules (plain, factual, calm, useful; no diagnosing, no scary warnings), the escalation ladder, the night colour palette, type, and imagery. Copy and visuals must follow it. Every animation uses a motion preset from `src/theme/motion.ts` (`slow` or `fast`, each with a duration and easeOut/easeIn/easeInOut curves); never hard-code timings or curves. Icons are Material Symbols (Material 3, Outlined) via the `Icon` component only. Everything must meet WCAG 2.2 AAA (see the Accessibility section of BRAND.md): 7:1 text contrast, 44 pt targets, nothing below 12 pt, Reduce Motion respected.
 
 ## Expo has changed — do not trust your training data
 

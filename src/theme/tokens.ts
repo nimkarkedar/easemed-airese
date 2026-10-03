@@ -11,7 +11,7 @@ const palette = {
   night: '#05070F', // deepest background
   midnight: '#0B1020', // app base colour
   deep: '#19294E', // cards, sheets (deck had #131B2E; updated by design, Oct 2026)
-  mist: '#93A0BB', // muted text
+  mist: '#B3BDD3', // muted text (deck had #93A0BB; lightened to pass WCAG AAA 7:1 on Midnight and Deep)
   moon: '#EEF1F7', // text
   breath: '#9DB4FF', // cool accent: breathing, links
   lamp: '#F4B65F', // the one warm light; use sparingly
@@ -75,13 +75,18 @@ const font = (w: Weight): TextStyle =>
     ? { fontFamily: `${nativeFamily[w]}, Montserrat, system-ui, sans-serif`, fontWeight: w }
     : { fontFamily: nativeFamily[w] };
 
+/**
+ * Type scale. Base 16; steps of about 1.25 (major third), rounded to whole sizes,
+ * Reading text has line height of at least 1.5x (WCAG 1.4.8). Nothing smaller than 12: text is read half-asleep at 6 am.
+ *   12 · 14 · 16 · 20 · 24 · 32
+ */
 export const type = {
-  title: { ...font('700'), fontSize: 28, lineHeight: 34 },
-  headline: { ...font('700'), fontSize: 24, lineHeight: 30 }, // onboarding statements
-  heading: { ...font('700'), fontSize: 20, lineHeight: 26 },
-  body: { ...font('400'), fontSize: 17, lineHeight: 26 },
-  subhead: { ...font('400'), fontSize: 15, lineHeight: 20 }, // short lines under a headline
-  small: { ...font('400'), fontSize: 13, lineHeight: 18 },
+  title: { ...font('700'), fontSize: 32, lineHeight: 40 }, // rare: big single statements
+  headline: { ...font('700'), fontSize: 24, lineHeight: 32 }, // screen headline (onboarding)
+  heading: { ...font('700'), fontSize: 20, lineHeight: 28 }, // section and sheet titles
+  body: { ...font('400'), fontSize: 16, lineHeight: 24 }, // base: all reading text
+  small: { ...font('400'), fontSize: 14, lineHeight: 22 }, // secondary detail
+  caption: { ...font('400'), fontSize: 12, lineHeight: 18 }, // the minimum: credits, fine print
   button: { ...font('700'), fontSize: 16, lineHeight: 20 },
 } satisfies Record<string, TextStyle>;
 
