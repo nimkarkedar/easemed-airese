@@ -7,3 +7,4 @@ export * from './Icon';
 export * from './InfoButton';
 export * from './BottomSheet';
 export * from './SystemAlertHost';
+export * from './IconButton';

@@ -9,6 +9,9 @@ declare global {
 /** iPhone 17 Pro: status bar + Dynamic Island on top, home indicator below. */
 const IPHONE_17_PRO: EdgeInsets = { top: 62, bottom: 34, left: 0, right: 0 };
 
+// Read once at start-up: in-app navigation changes the URL and would drop ?frame=iphone.
+const IN_PHONE_FRAME = Platform.OS === 'web' && typeof location !== 'undefined' && location.search.includes('frame=iphone');
+
 /**
  * Safe-area insets. In a browser there are none, so when the app runs inside
  * the iPhone frame (/iphone.html or the shared preview) we use the iPhone's.
@@ -17,7 +20,7 @@ export function useInsets(): EdgeInsets {
   const insets = useSafeAreaInsets();
   if (Platform.OS === 'web') {
     if (globalThis.__AIRESE_PREVIEW_INSETS__) return globalThis.__AIRESE_PREVIEW_INSETS__;
-    if (typeof location !== 'undefined' && location.search.includes('frame=iphone')) return IPHONE_17_PRO;
+    if (IN_PHONE_FRAME) return IPHONE_17_PRO;
   }
   return insets;
 }

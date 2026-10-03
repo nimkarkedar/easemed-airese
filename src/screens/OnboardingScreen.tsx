@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, View, type ImageSourcePropType, type LayoutChangeEvent } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { AppText, BottomSheet, Button, InfoButton } from '../components';
+import { AppText, BottomSheet, Button, IconButton, InfoButton } from '../components';
 import { colors, motion, space, useReducedMotion } from '../theme';
 
 /**
@@ -141,28 +141,12 @@ function Carousel({ width, height, onContinue }: { width: number; height: number
 
   const goTo = (i: number) => scroller.current?.scrollTo({ x: i * width, animated: true });
 
-  // Continue appears only once the last page has settled, and hides as soon as you swipe back.
-  const last = SLIDES.length - 1;
-  const [atLast, setAtLast] = useState(false);
-  const [page, setPage] = useState(0); // for screen readers: which page is current
-  const continueIn = useRef(new Animated.Value(0)).current;
+  // Which page is current (for screen readers on the page dashes).
+  const [page, setPage] = useState(0);
   const onScrollJS = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
-    const x = e.nativeEvent.contentOffset.x;
-    const settled = Math.abs(x - last * width) < 1;
-    setAtLast((prev) => (prev === settled ? prev : settled));
-    const nearest = Math.round(x / width);
+    const nearest = Math.round(e.nativeEvent.contentOffset.x / width);
     setPage((prev) => (prev === nearest ? prev : nearest));
   };
-  useEffect(() => {
-    Animated.timing(continueIn, {
-      toValue: atLast ? 1 : 0,
-      // Fades in once the page is still; gets out of the way quickly when you swipe back.
-      duration: motion.fast.duration,
-      delay: atLast ? motion.stagger : 0,
-      easing: atLast ? motion.fast.easeOut : motion.fast.easeIn,
-      useNativeDriver: native,
-    }).start();
-  }, [atLast, continueIn]);
 
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -246,21 +230,14 @@ function Carousel({ width, height, onContinue }: { width: number; height: number
               <AppText variant="body" color="textMuted" style={{ marginTop: space.sm }}>
                 {slide.body}
               </AppText>
-              {slide.showContinue && (
-                // Laid out under the text, but held still on screen while the page moves
-                // (translateX cancels the scroll) and only shown once the page has settled.
-                <Animated.View
-                  style={{
-                    pointerEvents: atLast ? 'auto' : 'none',
-                    alignSelf: 'flex-start',
-                    marginTop: space.xl,
-                    opacity: continueIn,
-                    transform: [{ translateX: Animated.subtract(scrollX, i * width) }],
-                  }}
-                >
+              {/* Part of the page: there with the text, moves and fades with it (no animation of its own) */}
+              <View style={{ alignSelf: 'flex-start', marginTop: space.xl }}>
+                {slide.showContinue ? (
                   <Button label="Continue" onPress={onContinue} />
-                </Animated.View>
-              )}
+                ) : (
+                  <IconButton icon="arrow_forward" label="Next" onPress={() => goTo(i + 1)} />
+                )}
+              </View>
             </Animated.View>
           </View>
         ))}

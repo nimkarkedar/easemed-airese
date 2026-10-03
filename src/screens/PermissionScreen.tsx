@@ -1,11 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Image, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import React, { useState } from 'react';
+import { Image, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AppText, Button } from '../components';
 import { requestMicrophone, requestNotifications } from '../lib/permissions';
-import { colors, motion, space, useInsets, useReducedMotion } from '../theme';
+import { colors, space, useInsets } from '../theme';
 
-const native = motion.useNativeDriver;
 const ART = 200; // graphic size (pt)
 const SIDE = space.gutter * 2; // text inset, same as onboarding
 
@@ -27,22 +26,7 @@ type Props = {
  */
 export function PermissionScreen({ art, title, body, cta, request, onDone }: Props) {
   const insets = useInsets();
-  const reduced = useReducedMotion();
   const [asking, setAsking] = useState(false);
-
-  // Graphic: fades in (slow) and breathes like the onboarding art.
-  const artIn = useRef(new Animated.Value(0)).current;
-  const breath = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(artIn, { toValue: 1, duration: motion.slow.duration, delay: motion.stagger, easing: motion.slow.easeOut, useNativeDriver: native }).start();
-  }, [artIn]);
-  useEffect(() => {
-    if (reduced) return breath.setValue(0);
-    const half = { duration: motion.ambient.duration / 2, easing: motion.ambient.easing, useNativeDriver: native };
-    const loop = Animated.loop(Animated.sequence([Animated.timing(breath, { toValue: 1, ...half }), Animated.timing(breath, { toValue: 0, ...half })]));
-    loop.start();
-    return () => loop.stop();
-  }, [breath, reduced]);
 
   const allow = async () => {
     if (asking) return;
@@ -68,15 +52,9 @@ export function PermissionScreen({ art, title, body, cta, request, onDone }: Pro
         </Pressable>
       </View>
 
+      {/* Graphic is there from the start: no entrance or ambient animation on these screens */}
       <View style={styles.artArea}>
-        <Animated.View
-          style={{
-            opacity: artIn,
-            transform: [{ scale: breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) }],
-          }}
-        >
-          <Image source={art} style={{ width: ART, height: ART }} accessible={false} />
-        </Animated.View>
+        <Image source={art} style={{ width: ART, height: ART }} accessible={false} />
       </View>
 
       <View style={styles.text}>
