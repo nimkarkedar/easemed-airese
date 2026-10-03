@@ -1,0 +1,249 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type ImageSourcePropType } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { AppText, BottomSheet, Button, InfoButton } from '../components';
+import { colors, motion, space } from '../theme';
+
+/**
+ * Artwork shown inside the circle. Each source image is a square with the
+ * circle painted on it; cx/cy/d (in source pixels) locate that painted circle
+ * so it can be lined up with, and clipped to, the on-screen circle.
+ */
+type Illustration = { source: ImageSourcePropType; px: number; cx: number; cy: number; d: number };
+
+type Slide = {
+  title: string;
+  body: string;
+  illustration: Illustration;
+  /** Last page only: the way forward. */
+  showContinue?: boolean;
+};
+
+// Copy as supplied by design (Oct 2026).
+const SLIDES: Slide[] = [
+  {
+    title: 'Know your sleep.',
+    body: 'Track how you sleep.\nSee the patterns.',
+    illustration: { source: require('../../assets/onboarding/1-hear.jpg'), px: 1254, cx: 622, cy: 598, d: 1117 },
+  },
+  {
+    title: 'Completely private.',
+    body: 'Your data stays on your device.\nEverything is stored locally.',
+    illustration: { source: require('../../assets/onboarding/2-private.jpg'), px: 1254, cx: 624, cy: 607, d: 1139 },
+  },
+  {
+    title: 'Get actionable insights',
+    body: 'Understand your sleeping behaviour.\nSeek care as required.',
+    illustration: { source: require('../../assets/onboarding/3-pattern.jpg'), px: 1254, cx: 633, cy: 592, d: 1100 },
+    showContinue: true,
+  },
+];
+
+// Measured from Figma "iPhone 16 & 17 Pro - 2/3/4" (402 pt wide), kept proportional to screen width.
+const CIRCLE = 556 / 402; // diameter
+const CIRCLE_TOP = 12;
+const CIRCLE_SHIFT = 116 / 402; // how far the circle moves per page
+const TEXT_GAP = 50; // circle bottom to headline
+const DASH_H = 4;
+const PARALLAX = 40; // how far each illustration slides inside the circle between pages
+const SIDE = space.gutter * 2; // text and indicator inset
+
+const native = motion.useNativeDriver;
+
+/**
+ * Onboarding carousel: three pages, one big circle.
+ * The pages scroll normally; the circle sits behind them and moves a shorter
+ * distance (right, centre, left), so it drifts across as you swipe. Inside it,
+ * the illustrations cross-fade and slide slightly against the circle's movement
+ * (parallax), and the scene breathes slowly the whole time.
+ */
+export function OnboardingScreen({ onContinue }: { onContinue?: () => void }) {
+  const { width } = useWindowDimensions();
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const scroller = useRef<ScrollView>(null);
+
+  const size = width * CIRCLE;
+  const shift = width * CIRCLE_SHIFT;
+  const pages = SLIDES.map((_, i) => i * width);
+
+  // Value per page → interpolated while swiping between pages.
+  const byPage = (values: number[]) => scrollX.interpolate({ inputRange: pages, outputRange: values, extrapolate: 'clamp' });
+  // 1 on page i, fading to 0 on its neighbours.
+  const onPage = (i: number) =>
+    scrollX.interpolate({ inputRange: [(i - 1) * width, i * width, (i + 1) * width], outputRange: [0, 1, 0], extrapolate: 'clamp' });
+
+  // Ambient motion: the scene breathes very slowly (slight scale and float), always on.
+  const breath = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const half = { duration: motion.duration.ambient / 2, easing: motion.easing.ambient, useNativeDriver: native };
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breath, { toValue: 1, ...half }),
+        Animated.timing(breath, { toValue: 0, ...half }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [breath]);
+
+  // Info sheet: which page's detail is open (null = closed).
+  const [infoFor, setInfoFor] = useState<number | null>(null);
+  const [lastInfo, setLastInfo] = useState(0); // keeps content visible while the sheet closes
+  const openInfo = (i: number) => {
+    setLastInfo(i);
+    setInfoFor(i);
+  };
+
+  const goTo = (i: number) => scroller.current?.scrollTo({ x: i * width, animated: true });
+
+  // Continue appears only once the last page has settled, and hides as soon as you swipe back.
+  const last = SLIDES.length - 1;
+  const [atLast, setAtLast] = useState(false);
+  const continueIn = useRef(new Animated.Value(0)).current;
+  const onScrollJS = (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+    const settled = Math.abs(e.nativeEvent.contentOffset.x - last * width) < 1;
+    setAtLast((prev) => (prev === settled ? prev : settled));
+  };
+  useEffect(() => {
+    Animated.timing(continueIn, {
+      toValue: atLast ? 1 : 0,
+      // Fades in once the page is still; gets out of the way quickly when you swipe back.
+      duration: atLast ? motion.duration.base : motion.duration.fast,
+      delay: atLast ? motion.stagger : 0,
+      easing: atLast ? motion.easing.enter : motion.easing.exit,
+      useNativeDriver: native,
+    }).start();
+  }, [atLast, continueIn]);
+
+  return (
+    <View style={styles.root}>
+      <StatusBar style="light" />
+
+      {/* The circle: behind the pages, moves right → centre → left */}
+      <Animated.View
+        style={[
+          styles.circle,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            top: CIRCLE_TOP,
+            left: (width - size) / 2,
+            transform: [{ translateX: byPage(SLIDES.map((_, i) => shift * (1 - i))) }],
+          },
+        ]}
+      >
+        {/* Illustrations: cross-fade between pages, slide a little against the circle (parallax), and breathe */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              transform: [
+                { scale: breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) },
+                { translateY: breath.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) },
+              ],
+            },
+          ]}
+        >
+          {SLIDES.map(({ illustration: art }, i) => {
+            const k = size / art.d; // source px → points, so the painted circle matches ours
+            return (
+              <Animated.Image
+                key={i}
+                source={art.source}
+                resizeMode="cover"
+                style={{
+                  position: 'absolute',
+                  width: art.px * k,
+                  height: art.px * k,
+                  left: size / 2 - art.cx * k,
+                  top: size / 2 - art.cy * k,
+                  opacity: onPage(i),
+                  transform: [
+                    {
+                      translateX: scrollX.interpolate({
+                        inputRange: [(i - 1) * width, i * width, (i + 1) * width],
+                        outputRange: [PARALLAX, 0, -PARALLAX],
+                        extrapolate: 'clamp',
+                      }),
+                    },
+                  ],
+                }}
+              />
+            );
+          })}
+        </Animated.View>
+      </Animated.View>
+
+      {/* The pages: text only, swiped horizontally */}
+      <Animated.ScrollView
+        ref={scroller}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: native, listener: onScrollJS })}
+      >
+        {SLIDES.map((slide, i) => (
+          <View key={i} style={{ width }}>
+            <Animated.View style={[styles.text, { marginTop: CIRCLE_TOP + size + TEXT_GAP, opacity: onPage(i) }]}>
+              <View style={styles.titleRow}>
+                <AppText variant="headline" style={styles.title}>
+                  {slide.title}
+                </AppText>
+                <InfoButton onPress={() => openInfo(i)} label={`More about: ${slide.title}`} />
+              </View>
+              <AppText variant="subhead" color="textMuted" style={{ marginTop: space.sm }}>
+                {slide.body}
+              </AppText>
+              {slide.showContinue && (
+                // Laid out under the text, but held still on screen while the page moves
+                // (translateX cancels the scroll) and only shown once the page has settled.
+                <Animated.View
+                  style={{
+                    pointerEvents: atLast ? 'auto' : 'none',
+                    alignSelf: 'flex-start',
+                    marginTop: space.xl,
+                    opacity: continueIn,
+                    transform: [{ translateX: Animated.subtract(scrollX, i * width) }],
+                  }}
+                >
+                  <Button label="Continue" onPress={onContinue} />
+                </Animated.View>
+              )}
+            </Animated.View>
+          </View>
+        ))}
+      </Animated.ScrollView>
+
+      {/* Page indicator, just above the headline: one dash per page, the current one lit. Tap to jump. */}
+      <View style={[styles.dashes, { top: CIRCLE_TOP + size + TEXT_GAP - space.xl - DASH_H }]}>
+        {SLIDES.map((_, i) => (
+          <Pressable key={i} onPress={() => goTo(i)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Page ${i + 1} of ${SLIDES.length}`}>
+            <Animated.View style={[styles.dash, { opacity: scrollX.interpolate({ inputRange: [(i - 1) * width, i * width, (i + 1) * width], outputRange: [0.3, 1, 0.3], extrapolate: 'clamp' }) }]} />
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Detail for the page's (i) button. Placeholder content until the sheet design lands. */}
+      <BottomSheet visible={infoFor !== null} onClose={() => setInfoFor(null)}>
+        <AppText variant="heading">{SLIDES[lastInfo].title}</AppText>
+        <AppText color="textMuted" style={{ marginTop: space.sm }}>
+          More detail coming soon.
+        </AppText>
+      </BottomSheet>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.background },
+  circle: { position: 'absolute', backgroundColor: colors.night, overflow: 'hidden', pointerEvents: 'none' },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  text: { paddingHorizontal: SIDE },
+  // Icon sits a little closer to the edge than the text inset (Figma: 32 pt from the right).
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginRight: space.xxl - SIDE },
+  title: { flex: 1 },
+  dashes: { position: 'absolute', left: SIDE, flexDirection: 'row', gap: space.sm },
+  dash: { width: 20, height: DASH_H, borderRadius: DASH_H / 2, backgroundColor: colors.text },
+});
