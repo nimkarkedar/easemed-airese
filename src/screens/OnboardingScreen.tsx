@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type ImageSourcePropType } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, View, type ImageSourcePropType, type LayoutChangeEvent } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AppText, BottomSheet, Button, InfoButton } from '../components';
 import { colors, motion, space } from '../theme';
@@ -58,7 +58,18 @@ const native = motion.useNativeDriver;
  * (parallax), and the scene breathes slowly the whole time.
  */
 export function OnboardingScreen({ onContinue }: { onContinue?: () => void }) {
-  const { width } = useWindowDimensions();
+  // Sized from the screen's own layout (not the window), so it's right in split view and in the preview frame.
+  const [width, setWidth] = useState(0);
+  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+  return (
+    <View style={styles.root} onLayout={onLayout}>
+      <StatusBar style="light" />
+      {width > 0 && <Carousel width={width} onContinue={onContinue} />}
+    </View>
+  );
+}
+
+function Carousel({ width, onContinue }: { width: number; onContinue?: () => void }) {
   const scrollX = useRef(new Animated.Value(0)).current;
   const scroller = useRef<ScrollView>(null);
 
@@ -71,6 +82,18 @@ export function OnboardingScreen({ onContinue }: { onContinue?: () => void }) {
   // 1 on page i, fading to 0 on its neighbours.
   const onPage = (i: number) =>
     scrollX.interpolate({ inputRange: [(i - 1) * width, i * width, (i + 1) * width], outputRange: [0, 1, 0], extrapolate: 'clamp' });
+
+  // First appearance: the artwork fades in gently once the screen is up.
+  const artIn = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(artIn, {
+      toValue: 1,
+      duration: motion.duration.slow,
+      delay: motion.stagger,
+      easing: motion.easing.enter,
+      useNativeDriver: native,
+    }).start();
+  }, [artIn]);
 
   // Ambient motion: the scene breathes very slowly (slight scale and float), always on.
   const breath = useRef(new Animated.Value(0)).current;
@@ -116,9 +139,7 @@ export function OnboardingScreen({ onContinue }: { onContinue?: () => void }) {
   }, [atLast, continueIn]);
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="light" />
-
+    <View style={StyleSheet.absoluteFill}>
       {/* The circle: behind the pages, moves right → centre → left */}
       <Animated.View
         style={[
@@ -133,11 +154,12 @@ export function OnboardingScreen({ onContinue }: { onContinue?: () => void }) {
           },
         ]}
       >
-        {/* Illustrations: cross-fade between pages, slide a little against the circle (parallax), and breathe */}
+        {/* Illustrations: fade in on arrival, cross-fade between pages, slide a little against the circle (parallax), and breathe */}
         <Animated.View
           style={[
             StyleSheet.absoluteFill,
             {
+              opacity: artIn,
               transform: [
                 { scale: breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) },
                 { translateY: breath.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) },
@@ -238,7 +260,7 @@ export function OnboardingScreen({ onContinue }: { onContinue?: () => void }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  circle: { position: 'absolute', backgroundColor: colors.night, overflow: 'hidden', pointerEvents: 'none' },
+  circle: { position: 'absolute', overflow: 'hidden', pointerEvents: 'none' }, // no fill: artwork fades in straight from the background
   center: { alignItems: 'center', justifyContent: 'center' },
   text: { paddingHorizontal: SIDE },
   // Icon sits a little closer to the edge than the text inset (Figma: 32 pt from the right).

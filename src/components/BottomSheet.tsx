@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, PanResponder, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, BackHandler, PanResponder, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { colors, motion, radius, space, useInsets } from '../theme';
 
 const native = motion.useNativeDriver;
@@ -10,6 +10,8 @@ const DISMISS_VELOCITY = 0.8;
 /**
  * Floating bottom sheet over a dimmed screen: inset from the edges, all corners
  * rounded, sitting just above the home indicator.
+ * Render it last inside the screen's root view; it overlays that screen
+ * (no native Modal, so it also stays inside the browser preview's phone frame).
  * Opens: backdrop fades in while the sheet glides up (enter).
  * Closes: tap the backdrop, or drag the sheet down; it drifts away (exit).
  */
@@ -32,6 +34,16 @@ export function BottomSheet({ visible, onClose, children }: { visible: boolean; 
     }
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Android back button closes the sheet.
+  useEffect(() => {
+    if (!visible) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [visible, onClose]);
+
   const pan = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) => g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
@@ -46,7 +58,7 @@ export function BottomSheet({ visible, onClose, children }: { visible: boolean; 
   if (!mounted) return null;
 
   return (
-    <Modal transparent visible animationType="none" onRequestClose={onClose} statusBarTranslucent>
+    <View style={[StyleSheet.absoluteFill, styles.layer]}>
       <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: progress }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
       </Animated.View>
@@ -67,11 +79,12 @@ export function BottomSheet({ visible, onClose, children }: { visible: boolean; 
         <View style={styles.handle} />
         {children}
       </Animated.View>
-    </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  layer: { zIndex: 10 },
   backdrop: { backgroundColor: colors.scrim },
   sheet: {
     position: 'absolute',

@@ -6,8 +6,8 @@
  *   npm run preview  →  preview-dist/index.html
  */
 import { execSync } from 'node:child_process';
-import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { extname, join, relative } from 'node:path';
 
 const root = new URL('..', import.meta.url).pathname;
 const tmp = join(root, '.preview-build');
@@ -21,11 +21,25 @@ execSync(`npx expo export --platform web --output-dir ${tmp}`, {
 });
 
 const jsDir = join(tmp, '_expo/static/js/web');
-const bundle = readdirSync(jsDir)
+let bundle = readdirSync(jsDir)
   .filter((f) => f.endsWith('.js'))
   .map((f) => readFileSync(join(jsDir, f), 'utf8'))
   .join('\n')
   .replace(/<\/script/gi, '<\\/script');
+
+// Embed images and fonts as data URIs so the preview is one file that works from any URL.
+const MIME = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.otf': 'font/otf' };
+const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]));
+const assetsDir = join(tmp, 'assets');
+if (existsSync(assetsDir)) {
+  for (const file of walk(assetsDir)) {
+    const mime = MIME[extname(file).toLowerCase()];
+    if (!mime) continue;
+    const url = '/' + relative(tmp, file).split('\\').join('/');
+    const dataUri = `data:${mime};base64,${readFileSync(file).toString('base64')}`;
+    bundle = bundle.split(JSON.stringify(url)).join(JSON.stringify(dataUri));
+  }
+}
 
 const html = readFileSync(join(root, 'public/iphone.html'), 'utf8')
   .replace(
@@ -36,6 +50,7 @@ const html = readFileSync(join(root, 'public/iphone.html'), 'utf8')
     "document.getElementById('app').src = small ? '/' : '/?frame=iphone';",
     'window.__AIRESE_PREVIEW_INSETS__ = small ? undefined : { top: 62, bottom: 34, left: 0, right: 0 };',
   )
+  .replace('live from localhost', 'prototype')
   .replace('</body>', () => `<script>${bundle}</script>\n</body>`);
 
 mkdirSync(out, { recursive: true });
