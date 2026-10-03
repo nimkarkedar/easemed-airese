@@ -9,6 +9,10 @@ npm install
 npx expo start        # scan the QR code with your phone
 ```
 
+## Live prototype
+
+https://nimkarkedar.github.io/easemed-airese/ — rebuilt and published automatically on every push to `main` (see `.github/workflows/pages.yml`).
+
 ## Browser preview (iPhone 17 Pro frame)
 
 ```bash
