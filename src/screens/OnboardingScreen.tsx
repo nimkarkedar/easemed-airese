@@ -157,9 +157,9 @@ function Carousel({ width, height, onContinue }: { width: number; height: number
     Animated.timing(continueIn, {
       toValue: atLast ? 1 : 0,
       // Fades in once the page is still; gets out of the way quickly when you swipe back.
-      duration: atLast ? motion.slow.duration : motion.fast.duration,
+      duration: motion.fast.duration,
       delay: atLast ? motion.stagger : 0,
-      easing: atLast ? motion.slow.easeOut : motion.fast.easeIn,
+      easing: atLast ? motion.fast.easeOut : motion.fast.easeIn,
       useNativeDriver: native,
     }).start();
   }, [atLast, continueIn]);
