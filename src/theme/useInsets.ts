@@ -2,7 +2,6 @@ import { Platform } from 'react-native';
 import { useSafeAreaInsets, type EdgeInsets } from 'react-native-safe-area-context';
 
 declare global {
-  // eslint-disable-next-line no-var
   var __AIRESE_PREVIEW_INSETS__: EdgeInsets | undefined;
 }
 

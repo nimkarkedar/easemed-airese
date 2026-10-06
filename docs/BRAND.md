@@ -203,6 +203,22 @@ Easmed's medical B2B tools and Airese show the same data, but they're built diff
 | Breath | `#9DB4FF` | Cool accent: breathing data, links |
 | Lamp | `#F4B65F` | **The one warm light.** Use sparingly for the key number or the action. |
 
+**Data colours** (Oct 2026, for Recording Details): each kind of data has one colour, the same everywhere: charts, data icons, legends, score rings. Marks and icons only, never text, buttons or links.
+
+| Data | Colour | Token |
+| --- | --- | --- |
+| Snoring | Ember `#FFAA5C` | `dataSnoring` |
+| Breathing interruptions | Iris `#B9A3FF` | `dataBreathing` |
+| Sleep and rest | Dew `#8EE3CF` | `dataSleep` |
+| Snoring loudness (light → very loud) | `#FFD9B0` · `#FFC285` · `#FFAA5C` · `#F28B3D` | `loudness` |
+
+- Checked together on Deep and Midnight with the dataviz palette validator: colour-blind separation ΔE ≥ 12, normal vision ≥ 19, 3:1+ contrast.
+- **Breath stays out of charts.** It's the UI colour (buttons, links), and it's too close to Iris for colour-blind readers.
+- Loudness is one hue, light to deep: magnitude, so never a rainbow, and **never red**.
+- Comparison bars: tonight in the data colour, earlier nights in neutral grey (faded Ember turns muddy on Deep).
+- Charts always label or shape their marks too, so colour is never the only cue.
+- **Status marks** on a night's headline: Dew ✓ for steady, Lamp ↗ for unusual, Lamp 👁 for "worth a closer look". Calm, never red.
+
 Lamp is the only warm colour. **Red is for form errors only** (`error` `#FFB4AB`, Material 3's dark-theme error colour, 11.2:1 on Midnight). It's never used for sleep data or results, which stay calm, never alarming.
 
 ### Type
@@ -226,7 +242,9 @@ Lamp is the only warm colour. **Red is for form errors only** (`error` `#FFB4AB`
 | `body` | **16 / 24** | Regular | Base: all reading text |
 | `small` | 14 / 22 | Regular | Secondary detail |
 | `caption` | 12 / 18 | Regular | The minimum: credits, fine print |
-| `button` | 16 / 20 | Medium | Button labels (Midnight on Breath, 9.4:1) |
+| `button` | 16 / 20 | Regular | Button labels (Midnight on Breath, 9.4:1) |
+
+**Two weights only: regular and semibold** (Oct 2026). Recording Details uses four sizes: `title` 32 (page title, big numbers), `heading` 20 (card and sheet titles), `body` 16, `small` 14. Big numbers are one size and weight, with no small units; durations use the compact `7h 36m`.
 
 ### Accessibility: WCAG 2.2 AAA
 
@@ -271,7 +289,7 @@ There are two presets in `src/theme/motion.ts`. Every animation uses one of them
 | **slow**: elegant, smooth | 1200 ms | cubic-bezier(0.3, 0, 0.2, 1) | cubic-bezier(0.47, 0, 0.745, 0.715) | cubic-bezier(0.37, 0, 0.63, 1) |
 | **fast**: a little snappier | 500 ms | cubic-bezier(0.2, 0, 0, 1) | cubic-bezier(0.4, 0, 0.8, 0.4) | cubic-bezier(0.45, 0, 0.2, 1) |
 
-Also: `ambient` (9 s sine loop, for background breathing) and `stagger` (350 ms offset between overlapping elements).
+Also: `ambient` (9 s sine loop, for background breathing), `attention` (1.8 s lap of light around the record dial, then a 3 s rest; the one call-to-action loop) and `stagger` (350 ms offset between overlapping elements).
 
 **Where each is used so far**
 

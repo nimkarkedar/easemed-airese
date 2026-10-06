@@ -6,6 +6,12 @@ import { Icon, type IconName } from './Icon';
 
 export type TabItem = { key: string; label: string; icon: IconName; iconSelected?: IconName };
 
+/** The two home tabs (web bar and browser preview; native tabs are declared in src/app/(tabs)/_layout.tsx). */
+export const HOME_TABS: TabItem[] = [
+  { key: 'home', label: 'Home', icon: 'home', iconSelected: 'home_fill' },
+  { key: 'recordings', label: 'Recordings', icon: 'graphic_eq' },
+];
+
 /** Space to leave at the bottom of a tab screen so content isn't hidden under the floating bar. */
 export const TAB_BAR_CLEARANCE = 64 + space.lg * 2;
 

@@ -6,6 +6,8 @@ const native = motion.useNativeDriver;
 /** Drag further than this, or flick down faster than this, to dismiss. */
 const DISMISS_DISTANCE = 120;
 const DISMISS_VELOCITY = 0.8;
+/** Height of the draggable top strip when dragFrom="top". */
+const TOP_STRIP = 88;
 
 /**
  * Floating bottom sheet over a dimmed screen: inset from the edges, all corners
@@ -14,14 +16,32 @@ const DISMISS_VELOCITY = 0.8;
  * in a portal at the app root (#root), which keeps it inside the browser preview's phone frame.
  * Opens: backdrop fades in while the sheet glides up (fast ease-out).
  * Closes: tap the backdrop, or drag the sheet down; it drifts away (fast ease-in).
+ * `dragFrom="top"`: only the top strip (handle and title) drags, for sheets whose content
+ * scrolls or swipes itself (e.g. the time wheels).
  */
-export function BottomSheet({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: React.ReactNode }) {
+export function BottomSheet({
+  visible,
+  onClose,
+  children,
+  dragFrom = 'sheet',
+  fit = false,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  dragFrom?: 'sheet' | 'top';
+  /** Size to the content instead of the standard minimum height (short explanations). */
+  fit?: boolean;
+}) {
   const { height } = useWindowDimensions();
   const insets = useInsets();
   const reduced = useReducedMotion(); // Reduce Motion: sheet fades instead of sliding
   const [mounted, setMounted] = useState(visible);
   const progress = useRef(new Animated.Value(0)).current; // 0 hidden, 1 open
   const drag = useRef(new Animated.Value(0)).current; // finger offset while dragging down
+  const sheetTop = useRef(0); // sheet's top edge on screen
+  const topOnly = useRef(dragFrom === 'top');
+  topOnly.current = dragFrom === 'top';
 
   useEffect(() => {
     if (visible) {
@@ -47,7 +67,8 @@ export function BottomSheet({ visible, onClose, children }: { visible: boolean; 
 
   const pan = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+      onMoveShouldSetPanResponder: (_, g) =>
+        g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx) && (!topOnly.current || g.y0 < sheetTop.current + TOP_STRIP),
       onPanResponderMove: (_, g) => drag.setValue(Math.max(0, g.dy)),
       onPanResponderRelease: (_, g) => {
         if (g.dy > DISMISS_DISTANCE || g.vy > DISMISS_VELOCITY) onClose();
@@ -66,8 +87,10 @@ export function BottomSheet({ visible, onClose, children }: { visible: boolean; 
 
       <Animated.View
         {...pan.panHandlers}
+        onLayout={(e) => (sheetTop.current = e.nativeEvent.layout.y)}
         style={[
           styles.sheet,
+          fit && { minHeight: 0 },
           {
             bottom: Math.max(space.xl, insets.bottom - space.sm),
             opacity: reduced ? progress : 1,

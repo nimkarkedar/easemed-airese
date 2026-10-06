@@ -18,3 +18,10 @@ export function requestNotifications(): Promise<boolean> {
     message: 'Notifications may include alerts, sounds and icon badges. These can be configured in Settings.',
   });
 }
+
+export type PermissionStatus = 'granted' | 'ask' | 'blocked';
+
+// The browser has no app permissions to read (null: keep what the prototype recorded) or Settings to open.
+export const microphoneStatus = async (): Promise<PermissionStatus | null> => null;
+export const notificationsStatus = async (): Promise<PermissionStatus | null> => null;
+export const openAppSettings = async () => {};

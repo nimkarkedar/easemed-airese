@@ -15,6 +15,10 @@ const palette = {
   moon: '#EEF1F7', // text
   breath: '#9DB4FF', // cool accent: breathing, links
   lamp: '#F4B65F', // the one warm light; use sparingly
+  // Data only (charts, data icons; never text, buttons or links). Added Oct 2026 for Recording Details.
+  ember: '#FFAA5C', // snoring
+  iris: '#B9A3FF', // breathing interruptions
+  dew: '#8EE3CF', // sleep and rest
 } as const;
 
 export const colors = {
@@ -31,6 +35,19 @@ export const colors = {
   brand: '#2E3A5A', // Airese navy (logo, decks). Role in the dark UI still open: see BRAND.md §5
   white: '#FFFFFF', // logo on the splash gradient
   scrim: 'rgba(5, 7, 15, 0.7)', // Night at 70%: dims the screen behind sheets
+
+  // Data: one colour per kind of thing, the same everywhere (charts, data icons, legends, score rings).
+  // Checked together on Deep and Midnight with the dataviz validator: colour-blind dE 12+, 3:1+ contrast.
+  // Breath stays out of charts (it's the UI colour, and too close to Iris for colour-blind readers).
+  // Marks and icons only, never text; every chart also labels or shapes its marks.
+  dataSnoring: palette.ember,
+  dataBreathing: palette.iris,
+  dataSleep: palette.dew,
+  // Soft tints of the same, for icon badges. Decorative: text on them uses Moon.
+  tintSnoring: 'rgba(255, 170, 92, 0.14)',
+  tintBreathing: 'rgba(185, 163, 255, 0.14)',
+  tintSleep: 'rgba(142, 227, 207, 0.12)',
+  tintWarm: 'rgba(244, 182, 95, 0.10)', // Lamp wash, for the meaning card
 } as const;
 
 /** Gradient stops, top to bottom. */
@@ -43,9 +60,17 @@ export const gradients = {
     { offset: 0.5, color: '#1C3470' },
     { offset: 1, color: '#225ED8' },
   ],
+  // Hero card (a night's takeaway): Deep lifting into the splash's mid blue. Moon text stays at 11:1+.
+  hero: [
+    { offset: 0, color: '#1C3470' },
+    { offset: 1, color: palette.deep },
+  ],
 } as const;
 
 export type ColorName = keyof typeof colors;
+
+/** Snoring loudness: one hue (Ember), light to deep. Magnitude, so never a rainbow, and no red. */
+export const loudness = { light: '#FFD9B0', moderate: '#FFC285', loud: '#FFAA5C', veryLoud: '#F28B3D' } as const;
 
 /** 4-pt grid */
 export const space = {
@@ -62,6 +87,7 @@ export const radius = {
   md: 12,
   lg: 16, // cards, form groups
   xl: 20, // banners
+  card: 24, // data cards (Recording Details)
   pill: 999, // buttons
   sheet: 28, // bottom sheet corners
 } as const;
@@ -92,7 +118,7 @@ export const type = {
   body: { ...font('400'), fontSize: 16, lineHeight: 24 }, // base: all reading text
   small: { ...font('400'), fontSize: 14, lineHeight: 22 }, // secondary detail
   caption: { ...font('400'), fontSize: 12, lineHeight: 18 }, // the minimum: credits, fine print
-  button: { ...font('500'), fontSize: 16, lineHeight: 20 }, // medium: calmer than bold
+  button: { ...font('400'), fontSize: 16, lineHeight: 20 }, // regular (Oct 2026: two weights only, regular and semibold)
 } satisfies Record<string, TextStyle>;
 
 export type TypeVariant = keyof typeof type;

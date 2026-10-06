@@ -1,21 +1,20 @@
 import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { AppText, Button } from '../components';
-import { requestMicrophone, requestNotifications } from '../lib/permissions';
+import { AppText, Button, PermissionSheet } from '../components';
+import { askPermission, type PermissionKind } from '../lib/permissionStatus';
 import { colors, space, useInsets } from '../theme';
 
 const ART = 200; // graphic size (pt)
 const SIDE = space.gutter; // standard screen edge
 
 type Props = {
+  kind: PermissionKind;
   art: ImageSourcePropType;
   title: string;
   body: string;
   cta: string;
-  /** Shows the system prompt; resolves when the user has answered. */
-  request: () => Promise<boolean>;
-  /** Next step, after the system prompt is answered or the user skips. */
+  /** Next step: after allowing, or after "Not now". */
   onDone?: () => void;
 };
 
@@ -23,20 +22,27 @@ type Props = {
  * Asks for one permission, explaining why first (Figma "iPhone 16 & 17 Pro - 7/8").
  * Skip top right; graphic centred in the space above; headline, body and the
  * Allow button anchored low, in thumb reach. Allow → system prompt → next step.
+ *
+ * Second chance in a bottom sheet (PermissionSheet): after Skip, why it matters; after
+ * "Don't Allow", how to turn it on in Settings. "Not now" moves on, and the sheet says it can be
+ * turned on later from Home (where it comes back in context: see HomeScreen).
  */
-export function PermissionScreen({ art, title, body, cta, request, onDone }: Props) {
+export function PermissionScreen({ kind, art, title, body, cta, onDone }: Props) {
   const insets = useInsets();
   const [asking, setAsking] = useState(false);
+  const [sheet, setSheet] = useState(false);
 
   const allow = async () => {
     if (asking) return;
     setAsking(true);
-    try {
-      await request();
-    } catch {
-      // A failed request shouldn't trap the user; carry on.
-    }
+    const status = await askPermission(kind);
     setAsking(false);
+    if (status === 'granted') onDone?.();
+    else setSheet(true); // said no: the sheet shows how to turn it on in Settings
+  };
+
+  const next = () => {
+    setSheet(false);
     onDone?.();
   };
 
@@ -45,7 +51,7 @@ export function PermissionScreen({ art, title, body, cta, request, onDone }: Pro
       <StatusBar style="light" />
 
       <View style={styles.topBar}>
-        <Pressable onPress={onDone} style={styles.skip} accessibilityRole="button" accessibilityLabel="Skip">
+        <Pressable onPress={() => setSheet(true)} style={styles.skip} accessibilityRole="button" accessibilityLabel="Skip">
           <AppText variant="small" style={styles.skipText}>
             Skip
           </AppText>
@@ -66,6 +72,8 @@ export function PermissionScreen({ art, title, body, cta, request, onDone }: Pro
         </AppText>
         <Button label={cta} onPress={allow} style={{ marginTop: space.xl }} />
       </View>
+
+      <PermissionSheet kind={kind} visible={sheet} onAllowed={next} onNotNow={next} onDismiss={() => setSheet(false)} note="You can turn this on any time from Home." />
     </View>
   );
 }
@@ -75,11 +83,11 @@ export function PermissionScreen({ art, title, body, cta, request, onDone }: Pro
 export function MicrophonePermissionScreen({ onDone }: { onDone?: () => void }) {
   return (
     <PermissionScreen
+      kind="microphone"
       art={require('../../assets/permissions/microphone.png')}
       title="Let Airese listen while you sleep."
       body="Allow microphone access to capture snoring and breathing. Recordings stay private on your device unless you choose to share them."
       cta="Allow microphone"
-      request={requestMicrophone}
       onDone={onDone}
     />
   );
@@ -88,11 +96,11 @@ export function MicrophonePermissionScreen({ onDone }: { onDone?: () => void }) 
 export function NotificationsPermissionScreen({ onDone }: { onDone?: () => void }) {
   return (
     <PermissionScreen
+      kind="notifications"
       art={require('../../assets/permissions/notifications.png')}
       title="Turn on notifications."
       body="We’ll remind you to start recording, and let you know when it stops. Just two notifications a day."
       cta="Allow notifications"
-      request={requestNotifications}
       onDone={onDone}
     />
   );

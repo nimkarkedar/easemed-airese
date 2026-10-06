@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" />
 <style>
-  :root { --page: #E9EBF0; --ink: #1A1A1A; --muted: #6B6F78; --frame: #2B3140; --frame-edge: #4A5266; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #0A0D16; --ink: #F2F3F5; --muted: #8C93A6; } }
-  :root[data-theme="dark"] { --page: #0A0D16; --ink: #F2F3F5; --muted: #8C93A6; }
+  :root { --page: #E9EBF0; --ink: #1A1A1A; --muted: #6B6F78; --field: #FFFFFF; --field-edge: #D3D6DE; --frame: #2B3140; --frame-edge: #4A5266; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #0A0D16; --ink: #F2F3F5; --muted: #8C93A6; --field: #141A28; --field-edge: #2A3244; } }
+  :root[data-theme="dark"] { --page: #0A0D16; --ink: #F2F3F5; --muted: #8C93A6; --field: #141A28; --field-edge: #2A3244; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--page); font-family: Montserrat, system-ui, sans-serif; color: var(--ink); }
   body { display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -18,6 +18,14 @@
   .meta { text-align: center; }
   .meta b { font-weight: 700; font-size: 15px; }
   .meta span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Demo: jump to any screen (desktop only) */
+  .jump { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .jump select { appearance: none; -webkit-appearance: none; font: 500 14px/1 Montserrat, system-ui, sans-serif; color: var(--ink);
+    background: var(--field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%238C93A6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+    border: 1px solid var(--field-edge); border-radius: 999px; padding: 10px 40px 10px 16px; min-height: 40px; cursor: pointer; }
+  .jump select:hover { border-color: var(--muted); }
+  .jump select:focus-visible { outline: 2px solid #9DB4FF; outline-offset: 2px; }
 
   /* iPhone 17 Pro: 402 × 874 pt screen */
   .phone { position: relative; width: 426px; height: 898px; border-radius: 68px; padding: 12px;
@@ -41,7 +49,7 @@
   @media (max-width: 500px) {
     body { display: block; }
     .stage { transform: none !important; display: block; height: 100%; }
-    .meta, .statusbar, .island, .home, .phone::before, .phone::after { display: none; }
+    .jump, .meta, .statusbar, .island, .home, .phone::before, .phone::after { display: none; }
     .phone { width: 100%; height: 100%; border-radius: 0; padding: 0; background: none; box-shadow: none; }
     .screen { width: 100%; height: 100%; border-radius: 0; }
   }
@@ -49,6 +57,31 @@
 </head>
 <body>
 <div class="stage" id="stage">
+  <label class="jump">Jump to
+    <select id="jump" aria-label="Jump to screen">
+      <optgroup label="Getting started">
+        <option value="splash">Splash</option>
+        <option value="onboarding">Walkthrough</option>
+        <option value="microphone">Microphone access</option>
+        <option value="notifications">Notifications</option>
+        <option value="details">Your details</option>
+      </optgroup>
+      <optgroup label="App">
+        <option value="home">Home</option>
+        <option value="home-after-first-night">Home · after first night</option>
+        <option value="recording">Recording Sleep</option>
+        <option value="recordings">Recordings</option>
+      </optgroup>
+      <optgroup label="Recording details">
+        <option value="night-steady">Ordinary night</option>
+        <option value="night-unusual">Unusual night</option>
+        <option value="night-pattern">Repeated pattern</option>
+        <option value="night-first">First night</option>
+        <option value="night-poor">Couldn’t hear clearly</option>
+        <option value="night-processing">Processing</option>
+      </optgroup>
+    </select>
+  </label>
   <div class="meta"><b>Airese</b><span>iPhone 17 Pro · 402 × 874 pt · live from localhost</span></div>
   <div class="phone">
     <div class="screen">
@@ -70,10 +103,31 @@
     document.getElementById('app').src = small ? '/' : '/?frame=iphone';
     function fit() {
       if (window.matchMedia('(max-width: 500px)').matches) return;
-      var s = Math.min(1, (window.innerHeight - 24) / 960, (window.innerWidth - 24) / 440);
+      var s = Math.min(1, (window.innerHeight - 24) / 1020, (window.innerWidth - 24) / 440);
       document.getElementById('stage').style.transform = 'scale(' + s + ')';
     }
     fit(); window.addEventListener('resize', fit);
+  })();
+
+  // Demo: jump to a screen. On localhost the phone loads that route; in the shared preview
+  // (no router) the app listens for 'airese:jump'. Either way the menu follows the app.
+  (function () {
+    var ROUTES = { splash: '/', onboarding: '/onboarding', microphone: '/permissions/microphone', notifications: '/permissions/notifications', details: '/details', home: '/home', 'home-after-first-night': '/home?state=after-first-night', recording: '/recording', recordings: '/recordings',
+      'night-steady': '/night/latest?state=steady', 'night-unusual': '/night/latest?state=unusual', 'night-pattern': '/night/latest?state=pattern',
+      'night-first': '/night/latest?state=first', 'night-poor': '/night/latest?state=poor', 'night-processing': '/night/latest?state=processing' };
+    var select = document.getElementById('jump');
+    var frame = document.getElementById('app');
+    select.addEventListener('change', function () {
+      if (frame) frame.src = ROUTES[select.value] + (ROUTES[select.value].indexOf('?') > -1 ? '&' : '?') + 'frame=iphone';
+      else window.dispatchEvent(new CustomEvent('airese:jump', { detail: select.value }));
+    });
+    window.addEventListener('airese:screen', function (e) { select.value = e.detail; });
+    if (frame) setInterval(function () {
+      try {
+        var loc = frame.contentWindow.location, m = loc.search.match(/state=([a-z-]+)/), path = loc.pathname + (m ? '?state=' + m[1] : '');
+        for (var key in ROUTES) if (ROUTES[key] === path && select.value !== key) select.value = key;
+      } catch (err) {}
+    }, 500);
   })();
 </script>
 </body>

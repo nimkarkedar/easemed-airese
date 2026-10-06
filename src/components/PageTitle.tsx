@@ -7,7 +7,7 @@ import { AppText } from './AppText';
 export const PAGE_SIDE = space.gutter;
 
 /**
- * Large page title for top-level screens (Home, History): same size, inset and row height
+ * Large page title for top-level screens (Home, Recordings): same size, inset and row height
  * everywhere, with an optional control on the right (e.g. the avatar), centred on the title line.
  * The screen adds the top spacing: insets.top + space.lg.
  */

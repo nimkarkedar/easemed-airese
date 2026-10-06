@@ -1,6 +1,5 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { colors } from '../theme';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
 

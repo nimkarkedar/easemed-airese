@@ -1,0 +1,215 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Defs, LinearGradient, RadialGradient, Circle, Stop } from 'react-native-svg';
+import { colors, gradients, motion, space, useReducedMotion } from '../theme';
+import { AppText } from './AppText';
+import { Icon } from './Icon';
+
+const native = motion.useNativeDriver;
+const TICKS = 60;
+const TICK_W = 3;
+const TICK_H = 12;
+const DIM = 0.3; // unlit tick
+const HOLD = motion.slow.duration; // how long to hold before recording starts
+const BUTTON = 0.64; // button diameter as a share of the dial
+const TRAIL = 0.22; // share of the ring the travelling light's tail covers
+
+/**
+ * The record button: a big round mic inside a ring of ticks, the one "larger than life" element.
+ *
+ * Press and hold: the ticks light up around the ring (slow preset) and recording starts when the
+ * ring is full, so a stray tap at bedtime never starts a night. Let go early and the ring drains
+ * away (fast ease-out). At rest the button breathes very gently (ambient preset), and now and then
+ * a light runs once round the ring (attention preset) to invite a press.
+ * Under it, the status line and an optional note, in one small muted block.
+ * Screen readers: a plain button; double tap starts at once (WCAG 2.5.1).
+ * Reduce Motion: no breathing or travelling light; the ring still fills, since it shows how long is left to hold.
+ */
+/** Where the button is on screen (window coordinates), for transitions that grow out of it. */
+export type DialRect = { x: number; y: number; width: number; height: number; button: number };
+
+/**
+ * `ready`: false while something must happen first (e.g. the microphone is off). A full hold then
+ * calls onStart (to ask for it) and the dial resets at once, without saying "Recording started".
+ */
+export function RecordDial({ size, note, ready = true, onStart }: { size: number; note?: string; ready?: boolean; onStart?: (from: DialRect) => void }) {
+  const ringRef = useRef<View>(null);
+  const reduced = useReducedMotion();
+  const progress = useRef(new Animated.Value(0)).current; // 0 → 1 while held
+  const press = useRef(new Animated.Value(0)).current; // 0 → 1 while the finger is down
+  const breath = useRef(new Animated.Value(0)).current;
+  const sweep = useRef(new Animated.Value(0)).current; // light running round the ring: 0 → 1 + TRAIL
+  const [state, setState] = useState<'idle' | 'holding' | 'started'>('idle');
+  const run = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    if (reduced) return breath.setValue(0);
+    const half = { duration: motion.ambient.duration / 2, easing: motion.ambient.easing, useNativeDriver: native };
+    const loop = Animated.loop(Animated.sequence([Animated.timing(breath, { toValue: 1, ...half }), Animated.timing(breath, { toValue: 0, ...half })]));
+    loop.start();
+    return () => loop.stop();
+  }, [breath, reduced]);
+
+  // At rest, a light runs round the ring now and then, inviting a press. Paused while held.
+  useEffect(() => {
+    if (reduced || state !== 'idle') return sweep.setValue(0);
+    const lap = Animated.loop(
+      Animated.sequence([
+        Animated.timing(sweep, { toValue: 1 + TRAIL, duration: motion.attention.duration, easing: motion.attention.easing, useNativeDriver: native }),
+        Animated.delay(motion.attention.rest),
+        Animated.timing(sweep, { toValue: 0, duration: 0, useNativeDriver: native }),
+      ]),
+    );
+    const wait = setTimeout(() => lap.start(), motion.stagger * 2); // let Home settle first
+    return () => {
+      clearTimeout(wait);
+      lap.stop();
+    };
+  }, [reduced, state, sweep]);
+
+  const start = () => {
+    ringRef.current?.measureInWindow((x, y, width, height) => onStart?.({ x, y, width, height, button: width * BUTTON }));
+    if (!ready) {
+      Animated.timing(progress, { toValue: 0, duration: motion.fast.duration, easing: motion.fast.easeOut, useNativeDriver: native }).start();
+      return setState('idle');
+    }
+    setState('started');
+    // Prototype: no recording screen yet, so the dial resets after a beat.
+    setTimeout(() => {
+      Animated.timing(progress, { toValue: 0, duration: motion.slow.duration, easing: motion.slow.easeInOut, useNativeDriver: native }).start();
+      setState('idle');
+    }, motion.slow.duration);
+  };
+
+  const pressIn = () => {
+    if (state === 'started') return;
+    setState('holding');
+    Animated.timing(press, { toValue: 1, duration: motion.fast.duration, easing: motion.fast.easeOut, useNativeDriver: native }).start();
+    run.current = Animated.timing(progress, { toValue: 1, duration: HOLD, easing: motion.slow.easeInOut, useNativeDriver: native });
+    run.current.start(({ finished }) => finished && start());
+  };
+
+  const pressOut = () => {
+    Animated.timing(press, { toValue: 0, duration: motion.fast.duration, easing: motion.fast.easeOut, useNativeDriver: native }).start();
+    if (state === 'started') return;
+    run.current?.stop();
+    Animated.timing(progress, { toValue: 0, duration: motion.fast.duration, easing: motion.fast.easeOut, useNativeDriver: native }).start();
+    setState((s) => (s === 'started' ? s : 'idle'));
+  };
+
+  const button = Math.round(size * BUTTON);
+  const radius = size / 2 - TICK_H / 2 - 4;
+  const blue = gradients.splash[gradients.splash.length - 1].color;
+
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <View ref={ringRef} style={{ width: size, height: size }}>
+        {/* Ring of ticks: each lights as the hold passes it */}
+        {Array.from({ length: TICKS }, (_, i) => (
+          <Animated.View
+            key={i}
+            pointerEvents="none"
+            style={[
+              styles.tick,
+              {
+                left: size / 2 - TICK_W / 2,
+                top: size / 2 - TICK_H / 2,
+                opacity: progress.interpolate({ inputRange: [i / TICKS, (i + 1) / TICKS], outputRange: [DIM, 1], extrapolate: 'clamp' }),
+                transform: [{ rotate: `${(360 / TICKS) * i}deg` }, { translateY: -radius }],
+              },
+            ]}
+          />
+        ))}
+
+        {/* The travelling light: Moon ticks over the ring, brightest at the head, fading behind it */}
+        {Array.from({ length: TICKS }, (_, i) => {
+          const at = i / TICKS;
+          return (
+            <Animated.View
+              key={`glint${i}`}
+              pointerEvents="none"
+              style={[
+                styles.tick,
+                styles.glint,
+                {
+                  left: size / 2 - TICK_W / 2,
+                  top: size / 2 - TICK_H / 2,
+                  opacity: sweep.interpolate({ inputRange: [at, at + 0.015, at + TRAIL], outputRange: [0, 1, 0], extrapolate: 'clamp' }),
+                  transform: [{ rotate: `${(360 / TICKS) * i}deg` }, { translateY: -radius }],
+                },
+              ]}
+            />
+          );
+        })}
+
+        {/* The button */}
+        <Animated.View
+          style={[
+            styles.center,
+            {
+              transform: [
+                { scale: breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.025] }) },
+                { scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.95] }) },
+              ],
+            },
+          ]}
+        >
+          <Pressable
+            onPressIn={pressIn}
+            onPressOut={pressOut}
+            onAccessibilityAction={(e) => e.nativeEvent.actionName === 'activate' && state !== 'started' && start()}
+            accessibilityActions={[{ name: 'activate' }]}
+            accessibilityRole="button"
+            accessibilityLabel="Start recording"
+            accessibilityHint="Press and hold to start"
+            style={[styles.button, { width: button, height: button, borderRadius: button / 2 }]}
+          >
+            <Svg style={StyleSheet.absoluteFill} width={button} height={button}>
+              <Defs>
+                {/* Splash blues: the white mic stays at 5.7:1 or more (WCAG 1.4.11) */}
+                <LinearGradient id="dial" x1="0.15" y1="0" x2="0.85" y2="1">
+                  <Stop offset="0" stopColor={blue} />
+                  <Stop offset="1" stopColor={gradients.splash[1].color} />
+                </LinearGradient>
+                <RadialGradient id="sheen" cx="35%" cy="25%" r="70%">
+                  <Stop offset="0" stopColor={colors.accent} stopOpacity={0.6} />
+                  <Stop offset="1" stopColor={colors.accent} stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Circle cx={button / 2} cy={button / 2} r={button / 2} fill="url(#dial)" />
+              <Circle cx={button / 2} cy={button / 2} r={button / 2} fill="url(#sheen)" />
+            </Svg>
+            {/* Positioned so it paints above the gradient on web too */}
+            <View style={{ position: 'relative', zIndex: 1 }}>
+              <Icon name="mic_fill" size={Math.round(button * 0.32)} color="white" />
+            </View>
+          </Pressable>
+        </Animated.View>
+      </View>
+
+      <AppText variant="small" color="textMuted" accessibilityLiveRegion="polite" style={{ marginTop: space.md, textAlign: 'center' }}>
+        {state === 'idle' ? 'Press and hold to start recording' : state === 'holding' ? 'Keep holding' : 'Recording started'}
+      </AppText>
+      {note ? (
+        <AppText variant="small" color="textMuted" style={{ textAlign: 'center' }}>
+          {note}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  tick: { position: 'absolute', width: TICK_W, height: TICK_H, borderRadius: TICK_W / 2, backgroundColor: colors.accent },
+  glint: { backgroundColor: colors.text, shadowColor: colors.accent, shadowOpacity: 0.9, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } },
+  center: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  button: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Soft Breath glow
+    shadowColor: colors.accent,
+    shadowOpacity: 0.45,
+    shadowRadius: 32,
+    shadowOffset: { width: 0, height: 0 },
+  },
+});
