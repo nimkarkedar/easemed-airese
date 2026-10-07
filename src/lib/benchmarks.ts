@@ -1,4 +1,4 @@
-import type { NightDetails } from './nightDetails';
+import { breathingPerHour, type NightDetails } from './nightDetails';
 
 /**
  * Where tonight sits on a simple scale, for the score cards in "All details".
@@ -9,7 +9,7 @@ import type { NightDetails } from './nightDetails';
  */
 export type Zone = { upTo: number; word: string };
 export type Benchmark = {
-  key: 'rest' | 'snoring' | 'breathing' | 'sleep' | 'loudness';
+  key: 'sound' | 'rest' | 'snoring' | 'breathing' | 'sleep' | 'loudness';
   name: string;
   tone: 'snoring' | 'breathing' | 'sleep' | 'rest';
   value: number;
@@ -30,8 +30,25 @@ export function zoneOf(b: Benchmark) {
 export function benchmarks(d: NightDetails): Benchmark[] {
   const hours = d.sleepMinutes / 60;
   const snoringPct = Math.round((d.snoringMinutes / d.night.minutes) * 100);
-  const perHour = Math.round((d.breathingEvents.length / hours) * 10) / 10;
+  const perHour = breathingPerHour(d);
   return [
+    {
+      key: 'sound',
+      name: 'Sound Score',
+      tone: 'snoring',
+      value: d.soundScore,
+      display: String(d.soundScore),
+      min: 0,
+      max: 100,
+      zones: [
+        { upTo: 39, word: 'Low' },
+        { upTo: 59, word: 'Moderate' },
+        { upTo: 100, word: 'High' },
+      ],
+      higherIsBetter: false,
+      guide: 'Under 40 is a quiet night',
+      explain: 'How loud your snoring was and how much of the night it filled, out of 100. Lower is quieter.',
+    },
     {
       key: 'rest',
       name: 'Rest Score',
@@ -69,20 +86,20 @@ export function benchmarks(d: NightDetails): Benchmark[] {
     },
     {
       key: 'breathing',
-      name: 'Breathing interruptions',
+      name: 'Breathing pauses',
       tone: 'breathing',
       value: perHour,
       display: `${perHour} an hour`,
       min: 0,
-      max: 20,
+      max: 30,
       zones: [
-        { upTo: 5, word: 'Few' },
-        { upTo: 15, word: 'Some' },
-        { upTo: 20, word: 'Many' },
+        { upTo: 4.9, word: 'Rarely' },
+        { upTo: 14.9, word: 'Sometimes' },
+        { upTo: 30, word: 'Often' },
       ],
       higherIsBetter: false,
       usual: d.baseline ? Math.round((d.baseline.breathingEvents / hours) * 10) / 10 : undefined,
-      guide: 'Fewer than 5 an hour is few',
+      guide: 'Fewer than 5 an hour is rare',
       explain: 'Moments when your breathing sounded paused or uneven while you snored, per hour of sleep. A count, not a diagnosis.',
     },
     {

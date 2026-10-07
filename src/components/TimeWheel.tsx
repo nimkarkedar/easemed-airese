@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(157, 180, 255, 0.4)', // Breath at 40%
     backgroundColor: 'rgba(11, 16, 32, 0.35)', // Midnight, sunk into the sheet
     overflow: 'hidden',
-    ...(Platform.OS === 'web' ? ({ cursor: 'grab', userSelect: 'none', touchAction: 'none' } as object) : null),
+    ...(Platform.OS === 'web' ? ({ cursor: 'grab', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none', touchAction: 'none' } as object) : null),
   },
   item: { position: 'absolute', left: 0, right: 0, top: (BOX - ITEM) / 2, height: ITEM, alignItems: 'center', justifyContent: 'center' },
 });

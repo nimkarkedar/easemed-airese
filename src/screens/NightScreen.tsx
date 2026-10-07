@@ -20,7 +20,8 @@ import {
   PAGE_SIDE,
   PrivacyFooter,
   RecentNightsChart,
-  ScoreRing,
+  ScoreTile,
+  SnoringChart,
   asleepStretches,
   scoreColor,
   useClipPlayer,
@@ -30,8 +31,11 @@ import { benchmarks, zoneOf, type Benchmark } from '../lib/benchmarks';
 import {
   EXPLAIN,
   busiestWindow,
+  CLIP_LABEL,
+  SAMPLE_SECONDS,
   clockAt,
-  loudnessLine,
+  dbAt,
+  loudMinutes,
   meaning,
   nightDetails,
   shortDuration,
@@ -39,6 +43,7 @@ import {
   summary,
   trend,
   trendWords,
+  type Clip,
   type ExplainKey,
   type NightDetails,
   type NightState,
@@ -48,14 +53,13 @@ import { formatDuration } from '../lib/time';
 import { colors, motion, radius, space, type } from '../theme';
 
 /** What a card opens: a large sheet. */
-type Sheet = 'details' | 'snoring' | 'breathing' | 'sleep' | 'loudness' | 'timeline' | 'clips' | 'recent';
+type Sheet = 'report' | 'sound' | 'snoring' | 'breathing' | 'sleep' | 'clips' | 'recent';
 const SHEET_TITLE: Record<Sheet, string> = {
-  details: 'All details',
-  snoring: 'Snoring',
-  breathing: 'Breathing interruptions',
+  report: 'Night report',
+  sound: 'Sound Score',
+  snoring: 'Snoring through the night',
+  breathing: 'Breathing pauses',
   sleep: 'Sleep',
-  loudness: 'How loud',
-  timeline: 'When did it happen?',
   clips: 'All clips',
   recent: 'Your recent nights',
 };
@@ -66,20 +70,26 @@ const PROCESSING_DEMO_MS = 6000; // prototype: how long "Looking through your ni
  * Recording Details (L1): one night as a series of cards in two shapes (wide and square). Each
  * card has a visual, one line of insight and "›" to a large sheet with the full story.
  *
- * Emphasis, top to bottom: scores at a glance (the way into All details) → the takeaway →
- * snoring and breathing → hear it → when → sleep and loudness → recent nights → what it means →
- * privacy footer. The sticky action follows the level of concern.
+ * Three layers, for three readers:
+ *   glance   (everyone, at 6 am) the verdict and "Have a listen" · Sound Score and breathing as plain levels
+ *   explore  your night in sound: the chart is the index to the clips; tap a moment to hear it, with the
+ *            pause and the breath after it marked · snoring time and sleep · recent nights · what it means
+ *   report   (the curious, and doctors) the night report sheet: zoomable chart, every measure, how it's measured
+ * Snoring is a score (comparable, safe to track). Breathing is a plain level on the page; its exact
+ * rate lives in its sheet and the report, pending Clinical. The sticky action follows the level of concern.
+ * First night: proof first (the night in sound comes before the scores, which have nothing to compare with yet).
  * Colour by data: Ember snoring, Iris breathing, Dew sleep. Type: four sizes, regular and semibold.
  * States: processing, poor audio, first night (no comparisons), ordinary, unusual, repeated pattern.
  */
 export function NightScreen({ night, state: initialState, onBack, slideIn = Platform.OS === 'web' }: { night: Night; state: NightState; onBack: () => void; slideIn?: boolean }) {
   const [state, setState] = useState(initialState);
   const [sheet, setSheet] = useState<Sheet | null>(null);
-  const [lastSheet, setLastSheet] = useState<Sheet>('details');
+  const [lastSheet, setLastSheet] = useState<Sheet>('report');
   const [explain, setExplain] = useState<ExplainKey | 'care' | null>(null);
   const player = useClipPlayer();
   const d = nightDetails(night, state === 'processing' ? 'steady' : state);
-  const [selected, setSelected] = useState(d.featured[d.featured.length - 1]?.id); // clip in the big player
+  // The moment in the player: a breathing pause if there was one (the clearest proof), else the first.
+  const [selected, setSelected] = useState((d.featured.find((c) => c.type === 'Interrupted breathing') ?? d.featured[0])?.id);
 
   useEffect(() => {
     if (state !== 'processing') return;
@@ -99,7 +109,74 @@ export function NightScreen({ night, state: initialState, onBack, slideIn = Plat
   const usual = d.baseline;
   const marks = benchmarks(d);
   const lead = d.featured.find((c) => c.id === selected) ?? d.featured[0];
+  const sound = mark(marks, 'sound');
+  const breathing = mark(marks, 'breathing');
   const status = statusMark(state);
+  const moment = lead ? d.featured.indexOf(lead) : -1;
+  const pick = (c: Clip) => {
+    setSelected(c.id);
+    if (player.playing !== c.id) player.toggle(c);
+  };
+
+  // Snoring is a score; breathing a plain level (its exact rate is in its sheet and the report).
+  const scores = (
+    <View style={styles.pair}>
+      <ScoreTile
+        tone="snoring"
+        fraction={sound.value / sound.max}
+        value={sound.display}
+        name="Sound Score"
+        level={zoneOf(sound).word}
+        detail={usual ? trendWords[trend(d.snoringMinutes, usual.snoringMinutes)] : 'Your first night'}
+        onPress={() => open('sound')}
+        accessibilityLabel={`Sound Score: ${sound.display} out of 100, ${zoneOf(sound).word}. More`}
+      />
+      <ScoreTile
+        tone="breathing"
+        fraction={breathing.value / breathing.max}
+        icon="airwave"
+        name="Breathing pauses"
+        level={zoneOf(breathing).word}
+        detail={usual ? trendWords[trend(d.breathingEvents.length, usual.breathingEvents)] : 'Your first night'}
+        onPress={() => open('breathing')}
+        accessibilityLabel={`Breathing pauses: ${zoneOf(breathing).word}. More`}
+      />
+    </View>
+  );
+
+  // The chart is the index to the audio: tap a moment to hear it.
+  const sound_ = (
+    <DataCard title="Your night in sound">
+      <AppText color="text" style={{ marginBottom: space.xl }}>
+        {chartLine(d)}
+      </AppText>
+      <SnoringChart d={d} mode="overview" moments={d.featured} selected={lead?.id} onSelect={pick} />
+      {lead && (
+        <View style={styles.moment}>
+          <ClipPlayer clip={lead} time={clockAt(d, lead.at)} player={player} detail={`${CLIP_LABEL[lead.type]} · ${dbAt(d, lead.at)} dB · ${lead.seconds} sec`} />
+        </View>
+      )}
+      <View style={styles.stepper}>
+        <Pressable onPress={() => pick(d.featured[moment - 1])} disabled={moment <= 0} accessibilityRole="button" accessibilityLabel="Previous moment" style={[styles.stepButton, moment <= 0 && styles.off]}>
+          <Icon name="chevron_left" size={22} color="text" />
+        </Pressable>
+        <AppText variant="small" color="textMuted" accessibilityLiveRegion="polite">{`${moment + 1} of ${d.featured.length}`}</AppText>
+        <Pressable
+          onPress={() => pick(d.featured[moment + 1])}
+          disabled={moment >= d.featured.length - 1}
+          accessibilityRole="button"
+          accessibilityLabel="Next moment"
+          style={[styles.stepButton, moment >= d.featured.length - 1 && styles.off]}
+        >
+          <Icon name="chevron_right" size={22} color="text" />
+        </Pressable>
+        <Pressable onPress={() => open('clips')} accessibilityRole="button" accessibilityLabel={`All ${d.clips.length} clips`} style={styles.allClips}>
+          <AppText variant="small" color="accent">{`All ${d.clips.length}`}</AppText>
+          <Icon name="chevron_right" size={18} color="accent" />
+        </Pressable>
+      </View>
+    </DataCard>
+  );
 
   return (
     <>
@@ -124,24 +201,7 @@ export function NightScreen({ night, state: initialState, onBack, slideIn = Plat
 
           {ready && (
             <>
-              {/* Scores at a glance: the way into All details */}
-              <DataCard
-                label="Tonight at a glance"
-                onPress={() => open('details')}
-                accessibilityLabel={`Tonight at a glance: ${marks
-                  .slice(0, 4)
-                  .map((b) => `${b.name} ${b.display}, ${zoneOf(b).word}`)
-                  .join('; ')}. See all details`}
-              >
-                <View style={styles.glance}>
-                  <Glance color={scoreColor.rest} icon="bedtime" fraction={d.restScore / 100} value={String(d.restScore)} label="Rest" />
-                  <Glance color={scoreColor.snoring} icon="graphic_eq" fraction={mark(marks, 'snoring').value / 40} value={mark(marks, 'snoring').display} label="Snoring" />
-                  <Glance color={scoreColor.breathing} icon="airwave" fraction={mark(marks, 'breathing').value / 20} value={String(d.breathingEvents.length)} label="Breathing" />
-                  <Glance color={scoreColor.sleep} icon="schedule" fraction={d.sleepMinutes / 540} value={shortDuration(d.sleepMinutes)} label="Sleep" />
-                </View>
-              </DataCard>
-
-              {/* The takeaway, with a colour-coded status mark */}
+              {/* The verdict, with a colour-coded status mark, and the way into the audio */}
               <InsightCard lead tone="hero" icon={status.icon} iconColor={status.color} title={sum.headline} body={sum.body}>
                 {lead && (
                   <Pressable
@@ -156,68 +216,24 @@ export function NightScreen({ night, state: initialState, onBack, slideIn = Plat
                 )}
               </InsightCard>
 
-              {/* Snoring and breathing */}
+              {usual && scores}
+              {sound_}
+              {!usual && scores}
+
+              {/* Snoring time and sleep */}
               <View style={styles.pair}>
-                <DataCard shape="square" icon="graphic_eq" tone="snoring" label="Snoring" onPress={() => open('snoring')} accessibilityLabel={`Snoring: ${formatDuration(d.snoringMinutes)}. More`}>
+                <DataCard shape="square" icon="graphic_eq" tone="snoring" label="Snoring" onPress={() => open('snoring')} accessibilityLabel={`Snoring time: ${formatDuration(d.snoringMinutes)}. More`}>
                   <BigNumber value={shortDuration(d.snoringMinutes)} />
-                  {usual ? <Trend value={d.snoringMinutes} usual={usual.snoringMinutes} /> : null}
+                  {usual ? <Trend value={d.snoringMinutes} usual={usual.snoringMinutes} /> : <Note>{`${pct(d.snoringMinutes, d.night.minutes)}% of the night`}</Note>}
                   <View style={styles.mini}>
                     <HourlyBars compact hours={d.hourly} />
                   </View>
                 </DataCard>
-                <DataCard shape="square" icon="airwave" tone="breathing" label="Breathing" onPress={() => open('breathing')} accessibilityLabel={`Breathing interruptions: ${d.breathingEvents.length}. More`}>
-                  <BigNumber value={String(d.breathingEvents.length)} />
-                  {usual ? <Trend value={d.breathingEvents.length} usual={usual.breathingEvents} /> : <Note>Interruptions</Note>}
-                  <View style={styles.mini}>
-                    <EventStrip d={d} />
-                  </View>
-                </DataCard>
-              </View>
-
-              {/* Hear it */}
-              <DataCard title="Hear last night">
-                {lead && <ClipPlayer clip={lead} time={clockAt(d, lead.at)} player={player} />}
-                <View style={styles.clipChips}>
-                  {d.featured.map((c) => (
-                    <Pressable
-                      key={c.id}
-                      onPress={() => setSelected(c.id)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: c.id === lead?.id }}
-                      accessibilityLabel={`${clockAt(d, c.at)}, ${c.type}`}
-                      style={[styles.clipChip, c.id === lead?.id && styles.clipChipOn]}
-                    >
-                      <AppText variant="small" color={c.id === lead?.id ? 'text' : 'textMuted'}>
-                        {clockAt(d, c.at)}
-                      </AppText>
-                    </Pressable>
-                  ))}
-                  <Pressable onPress={() => open('clips')} accessibilityRole="button" accessibilityLabel={`All ${d.clips.length} clips`} style={styles.allClips}>
-                    <AppText variant="small" color="accent">{`All ${d.clips.length}`}</AppText>
-                    <Icon name="chevron_right" size={18} color="accent" />
-                  </Pressable>
-                </View>
-              </DataCard>
-
-              {/* When */}
-              <DataCard title="When did it happen?" insight={`Mostly between ${busiestWindow(d)}.`} onPress={() => open('timeline')}>
-                <NightTimeline details={d} />
-              </DataCard>
-
-              {/* Sleep and loudness */}
-              <View style={styles.pair}>
                 <DataCard shape="square" icon="bedtime" tone="sleep" label="Sleep" onPress={() => open('sleep')} accessibilityLabel={`Sleep: ${formatDuration(d.sleepMinutes)}. ${zoneOf(mark(marks, 'sleep')).word}. More`}>
                   <BigNumber value={shortDuration(d.sleepMinutes)} />
                   <Note>{zoneOf(mark(marks, 'sleep')).word}</Note>
                   <View style={styles.mini}>
                     <AsleepStrip d={d} />
-                  </View>
-                </DataCard>
-                <DataCard shape="square" icon="graphic_eq" tone="snoring" label="How loud" onPress={() => open('loudness')} accessibilityLabel={`How loud: ${d.averageDb} decibels on average. ${loudnessLine(d)}. More`}>
-                  <BigNumber value={`${d.averageDb} dB`} />
-                  <Note>{loudnessLine(d).split(' · ')[0]}</Note>
-                  <View style={styles.mini}>
-                    <LoudnessBars compact share={d.intensityShare} />
                   </View>
                 </DataCard>
               </View>
@@ -233,6 +249,15 @@ export function NightScreen({ night, state: initialState, onBack, slideIn = Plat
 
               {/* What it means */}
               {means && <InsightCard tone="warm" icon="lightbulb" title={means.title} body={means.body} onInfo={() => setExplain('deciding')} infoLabel="How Airese decides what to say" />}
+
+              {/* The night report: every measure, for the curious and for a doctor */}
+              <DataCard title="Night report" insight="Every measure from last night, and how Airese got it. Handy to show a doctor." onPress={() => open('report')}>
+                <View style={styles.stats}>
+                  <Stat value={`${d.peakDb} dB`} label="Loudest" />
+                  <Stat value={String(breathing.value)} label="Pauses an hour" />
+                  <Stat value={shortDuration(loudMinutes(d))} label="Above 60 dB" />
+                </View>
+              </DataCard>
 
               <PrivacyFooter onMore={() => setExplain('privacy')} />
             </>
@@ -266,20 +291,6 @@ const mark = (marks: Benchmark[], k: Benchmark['key']) => marks.find((b) => b.ke
 
 // ---------- Small pieces ----------
 
-function Glance({ color, icon, fraction, value, label }: { color: string; icon: 'bedtime' | 'graphic_eq' | 'airwave' | 'schedule'; fraction: number; value: string; label: string }) {
-  return (
-    <View style={styles.glanceItem}>
-      <ScoreRing fraction={fraction} color={color} icon={icon} size={60} />
-      <AppText color="text" style={[styles.semibold, { marginTop: space.md }]} numberOfLines={1}>
-        {value}
-      </AppText>
-      <AppText variant="small" color="textMuted">
-        {label}
-      </AppText>
-    </View>
-  );
-}
-
 function Trend({ value, usual }: { value: number; usual: number }) {
   const t = trend(value, usual);
   return (
@@ -289,23 +300,24 @@ function Trend({ value, usual }: { value: number; usual: number }) {
   );
 }
 
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <AppText color="text" style={styles.semibold} numberOfLines={1}>
+        {value}
+      </AppText>
+      <AppText variant="small" color="textMuted">
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
 function Note({ children }: { children: string }) {
   return (
     <AppText variant="small" color="textMuted" style={{ marginTop: space.xs }}>
       {children}
     </AppText>
-  );
-}
-
-/** Breathing interruptions across the night as Iris dots on a faint line. */
-function EventStrip({ d }: { d: NightDetails }) {
-  return (
-    <View style={styles.strip} accessible={false}>
-      <View style={styles.stripLine} />
-      {d.breathingEvents.map((m, i) => (
-        <View key={i} style={[styles.stripDot, { left: `${(m / d.night.minutes) * 100}%` }]} />
-      ))}
-    </View>
   );
 }
 
@@ -320,6 +332,19 @@ function AsleepStrip({ d }: { d: NightDetails }) {
   );
 }
 
+const pct = (part: number, whole: number) => Math.round((part / whole) * 100);
+
+/** The chart's one line: how long it was louder than a conversation, and when. */
+function chartLine(d: NightDetails) {
+  const loud = loudMinutes(d);
+  return loud ? `Louder than a conversation for ${shortDuration(loud)}. Mostly between ${busiestWindow(d)}.` : `Quieter than a conversation all night. Mostly between ${busiestWindow(d)}.`;
+}
+
+/** Breathing pauses in each hour of the recording. */
+function breathingByHour(d: NightDetails) {
+  return d.hourly.map((h, i) => ({ label: h.label, minutes: d.breathingEvents.filter((m) => Math.floor(m / 60) === i).length }));
+}
+
 function recentLine(d: NightDetails) {
   if (!d.baseline) return '';
   const t = trend(d.snoringMinutes, d.baseline.snoringMinutes);
@@ -332,53 +357,106 @@ function recentLine(d: NightDetails) {
 function SheetBody({ which, d, marks, player }: { which: Sheet; d: NightDetails; marks: Benchmark[]; player: ClipPlayerState }) {
   const usual = d.baseline;
   switch (which) {
-    case 'details':
+    case 'report':
       return (
         <View style={styles.sheetBody}>
-          <AppText color="textMuted">How tonight compares with guide ranges and your own usual.</AppText>
+          <AppText color="textMuted">Everything Airese measured last night, and how. Phones differ, so compare nights rather than reading one number on its own.</AppText>
+          <Block label="The whole night">
+            <SnoringChart d={d} height={240} />
+          </Block>
+          <Block label="Measures">
+            {[
+              ['Recorded', formatDuration(d.night.minutes)],
+              ['Asleep (estimated)', formatDuration(d.sleepMinutes)],
+              ['Snoring', `${formatDuration(d.snoringMinutes)} · ${pct(d.snoringMinutes, d.night.minutes)}%`],
+              ['Above 60 dB', formatDuration(loudMinutes(d))],
+              ['Average while snoring', `${d.averageDb} dB`],
+              ['Loudest', `${d.peakDb} dB`],
+              ['Breathing pauses', `${d.breathingEvents.length} · ${mark(marks, 'breathing').value} an hour`],
+              ['Coughs', String(d.coughs.length)],
+              ['Movements', String(d.movements.length)],
+              ['Restless', `${d.awakenings} ${d.awakenings === 1 ? 'time' : 'times'}`],
+              ['Sound Score', `${d.soundScore} · loudness ${d.soundParts.loudness} + snoring ${d.soundParts.snoring}`],
+            ].map(([what, value]) => (
+              <View key={what} style={styles.refRow}>
+                <AppText color="text" style={{ flex: 1 }}>
+                  {what}
+                </AppText>
+                <AppText color="textMuted" style={{ textAlign: 'right', flexShrink: 1 }}>
+                  {value}
+                </AppText>
+              </View>
+            ))}
+          </Block>
           {marks.map((b) => (
             <ScoreCard key={b.key} b={b} />
           ))}
+          <Block label="How Airese measures">
+            <AppText color="text">{`Your phone’s microphone measures sound level every ${SAMPLE_SECONDS} seconds. Airese recognises snoring, pauses in breathing, coughs and movement from the sound alone, on your phone. A pause is counted when snoring stops for a moment and starts again with a louder breath.`}</AppText>
+          </Block>
           <AppText variant="small" color="textMuted">
-            Prototype: guide ranges are placeholders for Clinical to confirm.
+            Prototype: guide ranges and the Sound Score formula are placeholders for Clinical and Engineering to confirm. Not a diagnosis.
           </AppText>
         </View>
       );
+    case 'sound': {
+      const sound = mark(marks, 'sound');
+      return (
+        <View style={styles.sheetBody}>
+          <Lead value={`${d.soundScore} out of 100`} note={`${zoneOf(sound).word}. ${sound.guide}.`} />
+          <Block label="What it’s made of">
+            <Part label="Loudness" value={d.soundParts.loudness} note={`Your snoring averaged ${d.averageDb} dB, peaking at ${d.peakDb} dB.`} />
+            <Part label="Snoring" value={d.soundParts.snoring} note={`You snored for ${pct(d.snoringMinutes, d.night.minutes)}% of the night.`} />
+          </Block>
+          <ScoreCard b={sound} />
+          <Plain muted>{EXPLAIN.soundScore.body}</Plain>
+        </View>
+      );
+    }
     case 'snoring':
       return (
         <View style={styles.sheetBody}>
-          <Lead value={formatDuration(d.snoringMinutes)} note={`${Math.round((d.snoringMinutes / d.night.minutes) * 100)}% of the recording, mostly between ${busiestWindow(d)}.`} />
+          <Lead value={formatDuration(d.snoringMinutes)} note={`${pct(d.snoringMinutes, d.night.minutes)}% of the recording. ${chartLine(d)}`} />
+          <Block label="How loud, through the night">
+            <SnoringChart d={d} height={260} />
+          </Block>
           <Block label="By hour">
             <HourlyBars hours={d.hourly} />
           </Block>
-          <Block label="How loud">
+          <Block label="Snoring intensity">
             <LoudnessBars share={d.intensityShare} />
           </Block>
+          <Block label="For reference">
+            {[
+              ['Whisper', '30 dB'],
+              ['Quiet room', '40 dB'],
+              ['Conversation', '60 dB'],
+              ['Vacuum cleaner', '75 dB'],
+            ].map(([what, db]) => (
+              <View key={what} style={styles.refRow}>
+                <AppText color="text">{what}</AppText>
+                <AppText color="textMuted">{db}</AppText>
+              </View>
+            ))}
+          </Block>
           {usual && <Plain>{`Your usual is ${formatDuration(usual.snoringMinutes)}. ${trendWords[trend(d.snoringMinutes, usual.snoringMinutes)]} tonight.`}</Plain>}
-          <Plain muted>{EXPLAIN.snoring.body}</Plain>
+          <Plain muted>{`${EXPLAIN.snoring.body} ${EXPLAIN.loudness.body}`}</Plain>
         </View>
       );
-    case 'breathing':
+    case 'breathing': {
+      const b = mark(marks, 'breathing');
       return (
         <View style={styles.sheetBody}>
-          <Lead value={`${d.breathingEvents.length} times`} note={`About ${mark(marks, 'breathing').display} of sleep.`} />
-          <Block label="When">
-            <EventStrip d={d} />
-            <View style={styles.times}>
-              {d.breathingEvents.map((m, i) => (
-                <View key={i} style={styles.timeChip}>
-                  <View style={[styles.keyDot, { backgroundColor: colors.dataBreathing }]} />
-                  <AppText variant="small" color="text">
-                    {clockAt(d, m)}
-                  </AppText>
-                </View>
-              ))}
-            </View>
+          <Lead value={`${b.value} an hour`} note={`${d.breathingEvents.length} pauses in ${formatDuration(d.sleepMinutes)} of sleep.`} />
+          <ScoreCard b={b} />
+          <Block label="By hour">
+            <HourlyBars hours={breathingByHour(d)} color={colors.dataBreathing} what="Breathing pauses" unit="pauses" />
           </Block>
           {usual && <Plain>{`Your usual is ${usual.breathingEvents} a night. ${trendWords[trend(d.breathingEvents.length, usual.breathingEvents)]} tonight.`}</Plain>}
           <Plain muted>{EXPLAIN.breathing.body}</Plain>
         </View>
       );
+    }
     case 'sleep':
       return (
         <View style={styles.sheetBody}>
@@ -393,46 +471,13 @@ function SheetBody({ which, d, marks, player }: { which: Sheet; d: NightDetails;
           <Plain muted>{EXPLAIN.sleep.body}</Plain>
         </View>
       );
-    case 'loudness':
-      return (
-        <View style={styles.sheetBody}>
-          <Lead value={`${d.averageDb} dB average`} note={`Peak ${d.peakDb} dB.`} />
-          <Block label="Snoring intensity">
-            <LoudnessBars share={d.intensityShare} />
-          </Block>
-          <Block label="For reference">
-            {[
-              ['Whisper', '30 dB'],
-              ['Quiet room', '40 dB'],
-              ['Conversation', '60 dB'],
-            ].map(([what, db]) => (
-              <View key={what} style={styles.refRow}>
-                <AppText color="text">{what}</AppText>
-                <AppText color="textMuted">{db}</AppText>
-              </View>
-            ))}
-          </Block>
-          <Plain muted>{EXPLAIN.loudness.body}</Plain>
-        </View>
-      );
-    case 'timeline':
-      return (
-        <View style={styles.sheetBody}>
-          <NightTimeline full details={d} clips={d.clips} playing={player.playing} onClip={player.toggle} />
-          <Block label="Snoring">
-            {d.segments.map((s, i) => (
-              <View key={i} style={styles.refRow}>
-                <AppText color="text">{`${clockAt(d, s.start)} to ${clockAt(d, s.end)}`}</AppText>
-                <AppText color="textMuted">{formatDuration(s.end - s.start)}</AppText>
-              </View>
-            ))}
-          </Block>
-        </View>
-      );
     case 'clips':
       return (
         <View style={[styles.sheetBody, { gap: space.md }]}>
           <Plain muted>{EXPLAIN.clips.body}</Plain>
+          <View style={[styles.block, { marginBottom: space.md }]}>
+            <NightTimeline full details={d} clips={d.clips} playing={player.playing} onClip={player.toggle} />
+          </View>
           {d.clips.map((c) => (
             <AudioSnippet key={c.id} clip={c} time={clockAt(d, c.at)} player={player} />
           ))}
@@ -445,7 +490,7 @@ function SheetBody({ which, d, marks, player }: { which: Sheet; d: NightDetails;
           {usual && (
             <Block label="Tonight compared with your usual">
               <CompareRow label="Snoring" tonight={formatDuration(d.snoringMinutes)} usual={formatDuration(usual.snoringMinutes)} t={trend(d.snoringMinutes, usual.snoringMinutes)} />
-              <CompareRow label="Breathing interruptions" tonight={String(d.breathingEvents.length)} usual={String(usual.breathingEvents)} t={trend(d.breathingEvents.length, usual.breathingEvents)} />
+              <CompareRow label="Breathing pauses" tonight={String(d.breathingEvents.length)} usual={String(usual.breathingEvents)} t={trend(d.breathingEvents.length, usual.breathingEvents)} />
               <CompareRow label="Loudness" tonight={`${d.averageDb} dB`} usual={`${usual.averageDb} dB`} t={trend(d.averageDb, usual.averageDb)} />
             </Block>
           )}
@@ -453,6 +498,24 @@ function SheetBody({ which, d, marks, player }: { which: Sheet; d: NightDetails;
         </View>
       );
   }
+}
+
+/** One part of the Sound Score: a bar out of 50 and what it reflects. */
+function Part({ label, value, note }: { label: string; value: number; note: string }) {
+  return (
+    <View style={styles.part} accessible accessibilityLabel={`${label}: ${value} of 50. ${note}`}>
+      <View style={styles.partHead}>
+        <AppText color="text">{label}</AppText>
+        <AppText color="text" style={styles.semibold}>{`${value} of 50`}</AppText>
+      </View>
+      <View style={styles.partTrack}>
+        <View style={{ width: `${(value / 50) * 100}%`, height: '100%', borderRadius: 5, backgroundColor: colors.dataSnoring }} />
+      </View>
+      <AppText variant="small" color="textMuted">
+        {note}
+      </AppText>
+    </View>
+  );
 }
 
 /** One score with its scale (All details). */
@@ -554,28 +617,26 @@ const styles = StyleSheet.create({
   mini: { marginTop: 'auto', paddingTop: space.lg },
   semibold: { fontFamily: type.heading.fontFamily, fontWeight: type.heading.fontWeight },
 
-  glance: { flexDirection: 'row', justifyContent: 'space-between' },
-  glanceItem: { alignItems: 'center', width: 76 },
+  moment: { marginTop: space.xl, paddingTop: space.xl, borderTopWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(238, 241, 247, 0.16)' },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.lg },
+  stepButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(238, 241, 247, 0.08)' },
+  off: { opacity: 0.4 },
+  stats: { flexDirection: 'row', gap: space.md },
 
   listen: { alignSelf: 'flex-start', minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg, borderRadius: radius.pill, backgroundColor: colors.accent, marginTop: space.xl },
 
-  clipChips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm, marginTop: space.xl },
-  clipChip: { minHeight: 44, paddingHorizontal: space.lg, justifyContent: 'center', borderRadius: radius.pill, borderWidth: 1, borderColor: 'rgba(179, 189, 211, 0.24)' },
-  clipChipOn: { backgroundColor: 'rgba(238, 241, 247, 0.08)', borderColor: colors.text },
   allClips: { minHeight: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.sm, marginLeft: 'auto' },
 
   strip: { height: 12, justifyContent: 'center' },
-  stripLine: { height: 2, borderRadius: 1, backgroundColor: 'rgba(185, 163, 255, 0.25)' },
-  stripDot: { position: 'absolute', width: 8, height: 8, borderRadius: 4, marginLeft: -4, backgroundColor: colors.dataBreathing },
   asleep: { position: 'absolute', height: 6, borderRadius: 3, backgroundColor: colors.dataSleep },
 
   sheetBody: { gap: space.xl, paddingTop: space.sm },
   block: { backgroundColor: colors.surface, borderRadius: radius.card, padding: space.gutter },
   scoreHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   word: { paddingHorizontal: space.md, minHeight: 28, justifyContent: 'center', borderRadius: radius.pill, borderWidth: 1.5 },
-  times: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.lg },
-  timeChip: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, minHeight: 32, borderRadius: radius.pill, backgroundColor: 'rgba(185, 163, 255, 0.1)' },
-  keyDot: { width: 8, height: 8, borderRadius: 4 },
+  part: { gap: space.sm, paddingVertical: space.sm },
+  partHead: { flexDirection: 'row', justifyContent: 'space-between' },
+  partTrack: { height: 10, borderRadius: 5, backgroundColor: 'rgba(179, 189, 211, 0.1)', overflow: 'hidden' },
   refRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: space.sm },
   compareRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
 

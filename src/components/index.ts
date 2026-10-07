@@ -37,3 +37,5 @@ export * from './BenchmarkScale';
 export * from './HourlyBars';
 export * from './LoudnessBars';
 export * from './ClipPlayer';
+export * from './ScoreTile';
+export * from './SnoringChart';

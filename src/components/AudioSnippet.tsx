@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
-import type { Clip } from '../lib/nightDetails';
+import { CLIP_LABEL, type Clip } from '../lib/nightDetails';
 import { colors, space } from '../theme';
 
 /** Data colour for a clip: breathing moments in Iris, snoring in Ember. */
@@ -113,7 +113,7 @@ export function AudioSnippet({ clip, time, player }: { clip: Clip; time: string;
           {time}
         </AppText>
         <AppText variant="small" color="textMuted" numberOfLines={2} style={{ marginTop: 2 }}>
-          {`${detail} · ${clip.type}`}
+          {`${detail} · ${CLIP_LABEL[clip.type]}`}
         </AppText>
       </View>
       {/* Waveform: Mist underneath, Breath on top revealed as it plays */}

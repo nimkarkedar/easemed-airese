@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Animated, Pressable, StyleSheet, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
-import type { Clip } from '../lib/nightDetails';
+import { CLIP_LABEL, type Clip, type ClipMark } from '../lib/nightDetails';
 import { colors, space } from '../theme';
 import { AppText } from './AppText';
 import { clipColor, type ClipPlayerState as Player } from './AudioSnippet';
@@ -21,12 +21,17 @@ function shape(peaks: number[]) {
   });
 }
 
+const MARK_LABEL: Record<ClipMark['kind'], string> = { pause: 'Pause', breath: 'Loud breath' };
+
 /**
  * The large clip player (after the reference): time and description, a big waveform in the
  * clip's data colour that fills as it plays, a scrubber with a knob (tap or drag along it to
  * jump), elapsed and total time, and a round play / pause button.
+ * Marked stretches (a breathing clip's pause and the louder breath after it) are framed on the
+ * waveform and named above it: the pause in a dashed Iris frame, the breath in a solid Ember one.
+ * `detail` replaces the line under the time (e.g. the level in dB).
  */
-export function ClipPlayer({ clip, time, player }: { clip: Clip; time: string; player: Player }) {
+export function ClipPlayer({ clip, time, player, detail }: { clip: Clip; time: string; player: Player; detail?: string }) {
   const [width, setWidth] = useState(0);
   const playing = player.playing === clip.id;
   const position = player.positionOf(clip.id);
@@ -50,13 +55,25 @@ export function ClipPlayer({ clip, time, player }: { clip: Clip; time: string; p
         {time}
       </AppText>
       <AppText variant="small" color="textMuted" style={{ marginTop: 2 }}>
-        {`${clip.seconds} sec · ${clip.type}`}
+        {detail ?? `${clip.seconds} sec · ${CLIP_LABEL[clip.type]}`}
       </AppText>
 
+      {/* Names for the marked stretches */}
+      {clip.marks && width > 0 ? (
+        <View style={styles.markLabels} accessible={false}>
+          {clip.marks.map((m) => (
+            <AppText key={m.kind} variant="small" color="text" numberOfLines={1} style={[styles.markLabel, { left: m.from * width, width: Math.max(96, (m.to - m.from) * width) }]}>
+              {MARK_LABEL[m.kind]}
+            </AppText>
+          ))}
+        </View>
+      ) : null}
+
       {/* Waveform: dim underneath, full colour revealed as it plays */}
-      <Pressable onPress={seekAt} accessibilityRole="adjustable" accessibilityLabel={`${time} clip, ${clip.seconds} seconds`} style={{ marginTop: space.xl }} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
+      <Pressable onPress={seekAt} accessibilityRole="adjustable" accessibilityLabel={`${time} clip, ${clip.seconds} seconds${clip.marks ? `: ${clip.marks.map((m) => `${MARK_LABEL[m.kind].toLowerCase()} at ${Math.round(m.from * clip.seconds)} seconds`).join(', ')}` : ''}`} style={{ marginTop: clip.marks ? space.sm : space.xl }} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}>
         {wave(0.3)}
         {position ? <Animated.View style={[StyleSheet.absoluteFill, { overflow: 'hidden', width: fill }]}><View style={{ width }}>{wave(1)}</View></Animated.View> : null}
+        {clip.marks?.map((m) => <View key={m.kind} pointerEvents="none" style={[styles.mark, m.kind === 'pause' ? styles.markPause : styles.markBreath, { left: m.from * width - 3, width: (m.to - m.from) * width + 6 }]} />)}
       </Pressable>
 
       {/* Scrubber */}
@@ -87,6 +104,11 @@ export function ClipPlayer({ clip, time, player }: { clip: Clip; time: string; p
 }
 
 const styles = StyleSheet.create({
+  markLabels: { height: 20, marginTop: space.xl },
+  markLabel: { position: 'absolute', top: 0 },
+  mark: { position: 'absolute', top: -6, bottom: -6, borderRadius: 8, borderWidth: 1.5 },
+  markPause: { borderColor: colors.dataBreathing, borderStyle: 'dashed', backgroundColor: 'rgba(185, 163, 255, 0.10)' },
+  markBreath: { borderColor: colors.dataSnoring, backgroundColor: 'rgba(255, 170, 92, 0.08)' },
   wave: { height: WAVE_H, flexDirection: 'row', alignItems: 'center', gap: 3 },
   scrub: { height: KNOB + 8, justifyContent: 'center', marginTop: space.lg },
   track: { height: 4, borderRadius: 2, backgroundColor: 'rgba(238, 241, 247, 0.15)' },

@@ -4,14 +4,12 @@ import Svg, { Circle } from 'react-native-svg';
 import { colors, motion, useReducedMotion } from '../theme';
 import { Icon, type IconName } from './Icon';
 
-
 /**
- * A small ring showing how far along its scale a score sits, with the data's icon in the middle.
+ * A ring showing how far along its scale a score sits, with the data's icon (or the score) in the middle.
  * Fills in once on arrival (slow ease-out); Reduce Motion shows it filled.
  */
-export function ScoreRing({ fraction, color, icon, size = 64 }: { fraction: number; color: string; icon: IconName; size?: number }) {
+export function ScoreRing({ fraction, color, icon, size = 64, stroke = 6, children }: { fraction: number; color: string; icon?: IconName; size?: number; stroke?: number; children?: React.ReactNode }) {
   const reduced = useReducedMotion();
-  const stroke = 6;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const f = Math.max(0.04, Math.min(1, fraction));
@@ -43,7 +41,7 @@ export function ScoreRing({ fraction, color, icon, size = 64 }: { fraction: numb
         />
       </Svg>
       <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-        <Icon name={icon} size={22} color="text" />
+        {children ?? (icon ? <Icon name={icon} size={22} color="text" /> : null)}
       </View>
     </View>
   );

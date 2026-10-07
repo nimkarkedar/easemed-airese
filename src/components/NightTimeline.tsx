@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import Svg, { Circle, Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { clockAt, type Clip, type NightDetails } from '../lib/nightDetails';
 import { colors, motion, space, useReducedMotion } from '../theme';
 import { AppText } from './AppText';
@@ -11,7 +11,7 @@ const RING = 12;
 /**
  * The night at a glance (PRD §9), drawn after the references:
  *   snoring   Ember bars every 3 minutes (one bar per step), taller is louder, fading towards the base
- *   breathing Iris markers with a dot head where breathing was interrupted (a different shape)
+ *   breathing Iris ticks along the top where breathing was interrupted (a different shape)
  *   asleep    a Dew line under the axis, with gaps where it sounded awake or restless
  * Faint hour lines; start and end times above. Bars grow in once (slow ease-out); Reduce Motion: drawn at once.
  * `full` is taller and adds clip rings you can tap to play. Colour is never the only cue: the legend
@@ -72,14 +72,10 @@ export function NightTimeline({ details, full = false, clips = [], playing, onCl
                   </LinearGradient>
                 </Defs>
                 {details.bins.map((v, i) =>
-                  v > 0 ? <Rect key={i} x={i * binW + 0.5} y={H - v * (H - 16)} width={Math.max(1.5, binW - 1)} height={v * (H - 16)} rx={Math.min(2, binW / 2)} fill="url(#snore)" /> : null,
+                  v > 0 ? <Rect key={i} x={i * binW + 0.5} y={H - v * (H - 20)} width={Math.max(1.5, binW - 1)} height={v * (H - 20)} rx={Math.min(2, binW / 2)} fill="url(#snore)" /> : null,
                 )}
                 {details.breathingEvents.map((m, i) => (
-                  <React.Fragment key={`b${i}`}>
-                    <Line x1={x(m)} x2={x(m)} y1={10} y2={H} stroke={colors.dataBreathing} strokeWidth={2} />
-                    <Circle cx={x(m)} cy={10} r={9} fill={colors.dataBreathing} opacity={0.22} />
-                    <Circle cx={x(m)} cy={10} r={5} fill={colors.dataBreathing} />
-                  </React.Fragment>
+                  <Rect key={`b${i}`} x={x(m) - 1} y={0} width={2} height={12} rx={1} fill={colors.dataBreathing} opacity={0.85} />
                 ))}
               </Svg>
             </Animated.View>
@@ -111,7 +107,7 @@ export function NightTimeline({ details, full = false, clips = [], playing, onCl
       {/* Legend */}
       <View style={styles.legend}>
         <Key swatch={<View style={[styles.keyDot, { backgroundColor: colors.dataSnoring }]} />} label="Snoring" />
-        {details.breathingEvents.length > 0 && <Key swatch={<View style={[styles.keyDot, { backgroundColor: colors.dataBreathing }]} />} label="Breathing interruption" />}
+        {details.breathingEvents.length > 0 && <Key swatch={<View style={styles.keyTick} />} label="Breathing pause" />}
         <Key swatch={<View style={styles.keyLine} />} label="Asleep" />
         {full && clips.length > 0 && <Key swatch={<View style={[styles.ring, styles.keyRing]} />} label="Clip" />}
       </View>
@@ -153,6 +149,7 @@ const styles = StyleSheet.create({
   ringOn: { backgroundColor: colors.text },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.lg, rowGap: space.sm, marginTop: space.lg },
   keyDot: { width: 10, height: 10, borderRadius: 5 },
+  keyTick: { width: 2, height: 12, borderRadius: 1, backgroundColor: colors.dataBreathing },
   keyLine: { width: 14, height: SLEEP_H, borderRadius: SLEEP_H / 2, backgroundColor: colors.dataSleep },
   keyRing: { position: 'relative' },
 });

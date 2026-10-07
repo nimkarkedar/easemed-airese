@@ -38,13 +38,19 @@ export function BenchmarkScale({ b, color }: { b: Benchmark; color: string }) {
       <View style={styles.words}>
         {width > 0 &&
           b.zones.map((z, i) => (
-            <AppText key={z.word} variant="small" color={z === current ? 'text' : 'textMuted'} style={[styles.word, { left: x(edges[i]), width: x(edges[i + 1]) - x(edges[i]) }]}>
+            <AppText key={z.word} variant="small" color={z === current ? 'text' : 'textMuted'} numberOfLines={1} style={[styles.word, wordBox(x(edges[i]), x(edges[i + 1]), width)]}>
               {z.word}
             </AppText>
           ))}
       </View>
     </View>
   );
+}
+
+/** A zone's word, centred under it; at least 84 wide so short zones don't wrap, kept inside the scale. */
+function wordBox(a: number, b: number, total: number) {
+  const w = Math.max(84, b - a);
+  return { width: w, left: Math.min(total - w, Math.max(0, (a + b) / 2 - w / 2)) };
 }
 
 const styles = StyleSheet.create({

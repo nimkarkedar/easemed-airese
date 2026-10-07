@@ -4,6 +4,7 @@ import Svg, { Defs, LinearGradient, RadialGradient, Circle, Stop } from 'react-n
 import { colors, gradients, motion, space, useReducedMotion } from '../theme';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
+import { holdSafeStyle, useNoContextMenu } from './holdSafe';
 
 const native = motion.useNativeDriver;
 const TICKS = 60;
@@ -34,6 +35,7 @@ export type DialRect = { x: number; y: number; width: number; height: number; bu
  */
 export function RecordDial({ size, note, ready = true, onStart }: { size: number; note?: string; ready?: boolean; onStart?: (from: DialRect) => void }) {
   const ringRef = useRef<View>(null);
+  useNoContextMenu(ringRef); // mobile browsers: no long-press menu mid-hold
   const reduced = useReducedMotion();
   const progress = useRef(new Animated.Value(0)).current; // 0 → 1 while held
   const press = useRef(new Animated.Value(0)).current; // 0 → 1 while the finger is down
@@ -103,7 +105,7 @@ export function RecordDial({ size, note, ready = true, onStart }: { size: number
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <View ref={ringRef} style={{ width: size, height: size }}>
+      <View ref={ringRef} style={[{ width: size, height: size }, holdSafeStyle]}>
         {/* Ring of ticks: each lights as the hold passes it */}
         {Array.from({ length: TICKS }, (_, i) => (
           <Animated.View
@@ -155,6 +157,8 @@ export function RecordDial({ size, note, ready = true, onStart }: { size: number
           ]}
         >
           <Pressable
+            // A hold must not be taken over by the panel's pull-down or a scroll.
+            cancelable={false}
             onPressIn={pressIn}
             onPressOut={pressOut}
             onAccessibilityAction={(e) => e.nativeEvent.actionName === 'activate' && state !== 'started' && start()}
@@ -162,7 +166,7 @@ export function RecordDial({ size, note, ready = true, onStart }: { size: number
             accessibilityRole="button"
             accessibilityLabel="Start recording"
             accessibilityHint="Press and hold to start"
-            style={[styles.button, { width: button, height: button, borderRadius: button / 2 }]}
+            style={[styles.button, { width: button, height: button, borderRadius: button / 2 }, holdSafeStyle]}
           >
             <Svg style={StyleSheet.absoluteFill} width={button} height={button}>
               <Defs>

@@ -22,7 +22,9 @@ export type ClipType = 'Loud snoring' | 'Repeated snoring' | 'Light snoring' | '
 
 /** Minutes are from the start of the recording. */
 export type SnoreSegment = { start: number; end: number; intensity: Intensity };
-export type Clip = { id: string; at: number; seconds: number; type: ClipType; peaks: number[] };
+/** A stretch inside a clip worth pointing at, as fractions of the clip (0–1). */
+export type ClipMark = { kind: 'pause' | 'breath'; from: number; to: number };
+export type Clip = { id: string; at: number; seconds: number; type: ClipType; peaks: number[]; marks?: ClipMark[] };
 
 export type NightDetails = {
   night: Night;
@@ -38,16 +40,23 @@ export type NightDetails = {
   peakDb: number;
   intensityShare: Record<Intensity, number>; // % of snoring time
   restScore: number;
-  soundScore: number;
+  soundScore: number; // 0–100: loudness part + snoring part
+  soundParts: { loudness: number; snoring: number }; // each 0–50
   baseline: { snoringMinutes: number; breathingEvents: number; averageDb: number } | null; // null before there's history
   patternNights?: { of: number; seen: number }; // e.g. 5 of the last 7
   awake: { start: number; end: number }[]; // stretches that sounded awake or restless
   recent: { day: string; snoringMinutes: number; tonight: boolean }[]; // last 7 nights, oldest first (empty before there's history)
   bins: number[]; // snoring loudness in 3-minute steps across the night, 0 (none) to 1 (very loud)
+  envelope: number[]; // sound level in dB every SAMPLE_SECONDS across the night (the interactive chart)
+  coughs: number[]; // minute offsets
+  movements: number[]; // minute offsets
   hourly: { label: string; minutes: number }[]; // snoring minutes in each hour of the recording
 };
 
 export const BIN_MINUTES = 3;
+export const SAMPLE_SECONDS = 20;
+export const SAMPLES_PER_MINUTE = 60 / SAMPLE_SECONDS;
+const SEGMENT_DB: Record<Intensity, number> = { light: 47, moderate: 53, loud: 60, veryLoud: 67 };
 
 // Small, seeded random so each night is stable.
 function seeded(id: string) {
@@ -69,31 +78,43 @@ export function nightDetails(night: Night, state: NightState): NightDetails {
   const between = (a: number, b: number) => a + rand() * (b - a);
   const heavy = state === 'pattern' || state === 'unusual';
 
-  // Snoring: mostly in the middle of the night (hours 2–6 of the recording).
+  // Snoring: stretches laid out through the night with quiet gaps between. A repeated-pattern night
+  // snores for long stretches most of the night; an ordinary one in a few short bursts.
+  const shape = state === 'pattern' ? { count: 14, len: [12, 30], gap: [3, 14] } : heavy ? { count: 10, len: [8, 22], gap: [8, 30] } : { count: 6, len: [3, 9], gap: [20, 60] };
   const segments: SnoreSegment[] = [];
-  const count = heavy ? 9 : 6;
-  for (let i = 0; i < count; i++) {
-    const centre = between(night.minutes * 0.22, night.minutes * 0.8);
-    const length = between(heavy ? 6 : 3, heavy ? 14 : 9);
+  let at = between(15, 40);
+  for (let i = 0; i < shape.count; i++) {
+    const start = Math.round(at);
+    const end = Math.min(night.minutes - 10, Math.round(at + between(shape.len[0], shape.len[1])));
+    if (end - start < 3) break;
     const level = Math.min(3, Math.floor(rand() * (heavy ? 4 : 2.6)));
-    segments.push({ start: Math.round(centre), end: Math.round(centre + length), intensity: INTENSITIES[level] });
+    segments.push({ start, end, intensity: INTENSITIES[level] });
+    at = end + between(shape.gap[0], shape.gap[1]);
   }
-  segments.sort((a, b) => a.start - b.start);
-  for (let i = 1; i < segments.length; i++) if (segments[i].start <= segments[i - 1].end + 2) segments[i].start = segments[i - 1].end + 3; // keep a gap
-  for (const s of segments) if (s.end <= s.start) s.end = s.start + 3;
   const snoringMinutes = segments.reduce((sum, s) => sum + (s.end - s.start), 0);
 
-  // Breathing interruptions: inside snoring periods.
-  const breathingCount = state === 'pattern' ? 16 : state === 'unusual' ? 11 : 4;
+  // Breathing interruptions: only while snoring (longer stretches hold more). Counts give a realistic rate an hour.
+  const breathingCount = state === 'pattern' ? 118 : state === 'unusual' ? 52 : 11;
   const breathingEvents = Array.from({ length: breathingCount }, () => {
-    const s = segments[Math.floor(rand() * segments.length)];
-    return Math.round(between(s.start, s.end));
+    let r = rand() * snoringMinutes;
+    const s = segments.find((seg) => (r -= seg.end - seg.start) < 0) ?? segments[segments.length - 1];
+    return Math.round(between(s.start + 1, s.end - 1));
   }).sort((a, b) => a - b);
 
-  // Clips: one per snoring period plus a few around breathing events; 12 in all.
+  // Clips: up to 8 snoring periods (spread through the night) plus breathing pauses; 12 in all.
+  // A breathing clip shows the pause (near silence) and the louder breath after it.
   const clips: Clip[] = [];
   const peaks = () => Array.from({ length: 18 }, () => 0.25 + rand() * 0.75);
-  segments.forEach((s, i) =>
+  const PAUSE: ClipMark = { kind: 'pause', from: 0.3, to: 0.56 };
+  const BREATH: ClipMark = { kind: 'breath', from: 0.6, to: 0.78 };
+  const pausePeaks = () =>
+    peaks().map((p, i, all) => {
+      const f = (i + 0.5) / all.length;
+      return f >= PAUSE.from && f < PAUSE.to ? 0.06 : f >= BREATH.from && f < BREATH.to ? 0.9 + rand() * 0.1 : p;
+    });
+  const keep = Math.min(8, segments.length);
+  const sampled = Array.from({ length: keep }, (_, k) => segments[Math.floor((k * segments.length) / keep)]);
+  sampled.forEach((s, i) =>
     clips.push({
       id: `c${i}`,
       at: Math.round(between(s.start, s.end)),
@@ -102,15 +123,10 @@ export function nightDetails(night: Night, state: NightState): NightDetails {
       peaks: peaks(),
     }),
   );
-  for (let i = 0; clips.length < 12 && i < breathingEvents.length; i += 2)
-    clips.push({ id: `b${i}`, at: breathingEvents[i], seconds: Math.round(between(12, 24)), type: 'Interrupted breathing', peaks: peaks() });
+  const gap = Math.max(1, Math.floor(breathingEvents.length / (12 - clips.length)));
+  for (let i = Math.floor(gap / 2); clips.length < 12 && i < breathingEvents.length; i += gap)
+    clips.push({ id: `b${i}`, at: breathingEvents[i], seconds: Math.round(between(12, 24)), type: 'Interrupted breathing', peaks: pausePeaks(), marks: [PAUSE, BREATH] });
   clips.sort((a, b) => a.at - b.at);
-
-  // Featured: the clips that best explain the night: the loudest, a repeated stretch, and a breathing moment if any.
-  const pick = (t: ClipType) => clips.find((c) => c.type === t);
-  const featured = [pick('Loud snoring') ?? pick('Repeated snoring'), pick('Repeated snoring') ?? pick('Light snoring'), pick('Interrupted breathing')]
-    .filter((c, i, all): c is Clip => !!c && all.indexOf(c) === i)
-    .sort((a, b) => a.at - b.at);
 
   const share = INTENSITIES.map((k) => segments.filter((s) => s.intensity === k).reduce((n, s) => n + s.end - s.start, 0));
   const total = share.reduce((a, b) => a + b, 0) || 1;
@@ -146,8 +162,45 @@ export function nightDetails(night: Night, state: NightState): NightDetails {
   }));
 
   // The recent average is exactly the average of the earlier bars, so chart and numbers agree.
+  // Fine-grained sound level: quiet room between snoring; inside it, a level that drifts and
+  // flickers breath by breath; a breathing pause drops to near silence, then a louder breath.
+  const envelope = Array.from({ length: night.minutes * SAMPLES_PER_MINUTE }, (_, i) => {
+    const m = i / SAMPLES_PER_MINUTE;
+    const s = segments.find((seg) => m >= seg.start && m < seg.end);
+    if (!s) return 31 + rand() * 2.5;
+    const edge = Math.min(1, (m - s.start) / 1.5, (s.end - m) / 1.5); // fade in and out over ~1.5 min
+    const level = SEGMENT_DB[s.intensity] + 5 * Math.sin(i / 9 + s.start) + (rand() - 0.5) * 9;
+    return 33 + (level - 33) * Math.max(0.2, edge);
+  });
+  for (const e of breathingEvents) {
+    const i = Math.round(e * SAMPLES_PER_MINUTE);
+    if (envelope[i] == null || envelope[i] < 40) continue; // only shows where there was snoring
+    envelope[i] = 33 + rand() * 3;
+    if (i + 1 < envelope.length) envelope[i + 1] = Math.min(84, envelope[i + 1] + 8 + rand() * 6); // the breath after
+  }
+  const snoringSamples = envelope.filter((db) => db >= 42);
+  const averageDb = Math.round(snoringSamples.reduce((a, b) => a + b, 0) / Math.max(1, snoringSamples.length));
+  const peakDb = Math.round(Math.max(...envelope));
+  const coughs = Array.from({ length: Math.round(between(1, 5)) }, () => Math.round(between(10, night.minutes - 10))).sort((a, b) => a - b);
+  const movements = [...awake.map((w) => w.start), ...Array.from({ length: Math.round(between(3, 7)) }, () => Math.round(between(5, night.minutes - 5)))].sort((a, b) => a - b);
+
+  // Featured: the few clips that best explain the night, spread across it: the loudest snoring,
+  // a breathing pause (the clearest proof), and one more snoring moment far from both.
+  const levelAt = (c: Clip) => envelope[Math.min(envelope.length - 1, c.at * SAMPLES_PER_MINUTE)] ?? 0;
+  const snoringClips = clips.filter((c) => c.type !== 'Interrupted breathing');
+  const pauseClips = clips.filter((c) => c.type === 'Interrupted breathing');
+  const loudest = snoringClips.reduce<Clip | undefined>((b, c) => (!b || levelAt(c) > levelAt(b) ? c : b), undefined);
+  const pause = pauseClips[Math.floor(pauseClips.length / 2)];
+  const chosen = [loudest, pause].filter((c): c is Clip => !!c);
+  const farthest = snoringClips.filter((c) => !chosen.includes(c)).reduce<Clip | undefined>((b, c) => {
+    const gap = (x: Clip) => Math.min(...chosen.map((k) => Math.abs(k.at - x.at)));
+    return !b || gap(c) > gap(b) ? c : b;
+  }, undefined);
+  const featured = [...chosen, ...(farthest ? [farthest] : [])].sort((a, b) => a.at - b.at);
+
   const earlier = recent.filter((r) => !r.tonight);
   const usualSnoring = earlier.length ? Math.round(earlier.reduce((n, r) => n + r.snoringMinutes, 0) / earlier.length) : baselineSnoring;
+  const soundParts = soundScoreParts(averageDb, snoringMinutes / night.minutes);
   return {
     night,
     state,
@@ -159,24 +212,47 @@ export function nightDetails(night: Night, state: NightState): NightDetails {
     awake,
     recent,
     bins,
+    envelope,
+    coughs,
+    movements,
     hourly,
     clips,
     featured,
-    averageDb: Math.round(between(heavy ? 48 : 42, heavy ? 56 : 49)),
-    peakDb: Math.round(between(heavy ? 78 : 66, heavy ? 88 : 74)),
+    averageDb,
+    peakDb,
     intensityShare,
     restScore: Math.round(between(heavy ? 55 : 72, heavy ? 68 : 86)),
-    soundScore: Math.round(between(heavy ? 58 : 24, heavy ? 78 : 44)),
+    soundScore: soundParts.loudness + soundParts.snoring,
+    soundParts,
     baseline: firstNight
       ? null
       : {
           snoringMinutes: usualSnoring,
-          breathingEvents: state === 'steady' ? breathingCount + 3 : Math.max(3, breathingCount - 7),
+          breathingEvents: state === 'steady' ? breathingCount + 4 : state === 'unusual' ? Math.round(breathingCount * 0.4) : Math.round(breathingCount * 0.9),
           averageDb: Math.round(between(44, 50)),
         },
     patternNights: state === 'pattern' ? { of: 7, seen: 5 } : undefined,
   };
 }
+
+/**
+ * Sound Score, 0–100, from two halves: how loud the snoring was (35 dB scores 0, 65 dB or more 50)
+ * and how much of the night it filled (none scores 0, 40% or more 50). Lower is quieter.
+ * PLACEHOLDER formula for the prototype: Engineering and Clinical to define the real one.
+ */
+export function soundScoreParts(averageDb: number, snoringShare: number) {
+  const clamp = (n: number) => Math.round(Math.max(0, Math.min(50, n)));
+  return { loudness: clamp(((averageDb - 35) / 30) * 50), snoring: clamp((snoringShare / 0.4) * 50) };
+}
+
+/** Breathing interruptions per hour of sleep, to one decimal. */
+export const breathingPerHour = (d: NightDetails) => Math.round((d.breathingEvents.length / (d.sleepMinutes / 60)) * 10) / 10;
+
+/** Sound level in dB at a minute of the night (from the envelope). */
+export const dbAt = (d: NightDetails, minute: number) => Math.round(d.envelope[Math.min(d.envelope.length - 1, Math.max(0, Math.round(minute * SAMPLES_PER_MINUTE)))]);
+
+/** Minutes of snoring louder than a conversation (60 dB). */
+export const loudMinutes = (d: NightDetails) => Math.round(d.envelope.filter((db) => db >= 60).length / SAMPLES_PER_MINUTE);
 
 // ---------- Plain-language helpers ----------
 
@@ -240,18 +316,21 @@ export function meaning(d: NightDetails): { title: string; body: string } | null
 /** Plain explanations for L2 sheets. Exact definitions to come from Product, Engineering and Clinical. */
 export const EXPLAIN = {
   clips: { title: 'Why these clips?', body: 'Airese picks the moments that best explain your night, not just the loudest ones: a loud stretch, a repeated one, and any time your breathing was interrupted.' },
-  breathing: { title: 'Breathing interruptions', body: 'Moments when your breathing sounded like it paused or became uneven while you snored. Airese counts them; it doesn’t diagnose anything.' },
+  breathing: { title: 'Breathing pauses', body: 'Moments when your breathing sounded like it paused or became uneven, counted per hour of sleep. Airese counts them; it doesn’t diagnose anything.' },
   usual: { title: 'What “usual” means', body: 'Airese compares this night with your own recent nights, not with other people. “About usual” means within a fifth of your recent average.' },
   deciding: { title: 'How Airese decides what to say', body: 'One night alone doesn’t show a pattern. Airese only suggests talking to someone when the same thing shows up again and again.' },
   privacy: { title: 'Private by design', body: 'Airese analyses your sleep sounds on your phone. Your recordings stay on your device, and you choose if and when to share anything.' },
   restScore: { title: 'Rest Score', body: 'A summary of how settled your night sounded: how long you slept, and how often snoring or waking broke it up.' },
-  soundScore: { title: 'Sound Score', body: 'A summary of how much snoring Airese heard and how intense it was during the recording. Lower is quieter.' },
+  soundScore: { title: 'Sound Score', body: 'Out of 100: half from how loud your snoring was, half from how much of the night it filled. Lower is quieter. It describes the sound, not your health.' },
   snoring: { title: 'Snoring', body: 'The total time Airese heard snoring, and how much of the recording that was.' },
   loudness: { title: 'Sound levels', body: 'How loud the snoring was, measured by your phone’s microphone. Phones differ, so compare nights rather than reading the numbers on their own.' },
   sleep: { title: 'Estimated sleep', body: 'Recording time minus the stretches where you sounded awake or restless. An estimate from sound alone.' },
   efficiency: { title: 'Sleep efficiency', body: 'How much of the recording you spent asleep, as a percentage. An estimate from sound alone.' },
 };
 export type ExplainKey = keyof typeof EXPLAIN;
+
+/** What to call a clip on screen: what was heard, plainly. */
+export const CLIP_LABEL: Record<ClipType, string> = { 'Loud snoring': 'Loud snoring', 'Repeated snoring': 'Steady snoring', 'Light snoring': 'Light snoring', 'Interrupted breathing': 'Breathing pause' };
 
 export const INTENSITY_LABEL: Record<Intensity, string> = { light: 'Light', moderate: 'Moderate', loud: 'Loud', veryLoud: 'Very loud' };
 
