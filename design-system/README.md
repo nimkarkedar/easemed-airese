@@ -10,6 +10,7 @@ Everything used to build the Airese app: tokens, type, motion, icons, brand asse
 | Motion | [`src/theme/motion.ts`](../src/theme/motion.ts) |
 | Components | [`src/components/`](../src/components/) (all exported from [`index.ts`](../src/components/index.ts)) |
 | Brand assets | [`assets/`](../assets/) |
+| **This page, visual version** | **https://nimkarkedar.github.io/easemed-airese/design-system/** (real swatches, type in Montserrat, icons, motion demos; generated from the code by `scripts/build-design-system.mjs`) |
 | See it running | https://nimkarkedar.github.io/easemed-airese/ |
 
 **The rules in one line each:**
@@ -237,7 +238,7 @@ The UI is flat: depth comes from colour (Midnight → Deep), not shadows.
 
 | Stacked (mark above wordmark) | Horizontal |
 | --- | --- |
-| <img src="../assets/brand/airese-logo.svg" width="96" alt="Airese logo, stacked"> | <img src="../assets/brand/airese-logo-hori.svg" width="200" alt="Airese logo, horizontal"> |
+| <img src="img/logo-stacked.svg" width="120" alt="Airese logo, stacked"> | <img src="img/logo-horizontal.svg" width="240" alt="Airese logo, horizontal"> |
 | [`airese-logo.svg`](../assets/brand/airese-logo.svg) · in code: `<Logo width color />` | [`airese-logo-hori.svg`](../assets/brand/airese-logo-hori.svg) · not yet used in the app |
 
 - **On the splash:** white on the gradient.
@@ -248,9 +249,9 @@ The UI is flat: depth comes from colour (Midnight → Deep), not shadows.
 
 | Asset | File | Notes |
 | --- | --- | --- |
-| iOS / default icon | [`assets/icon.png`](../assets/icon.png) | |
-| Android adaptive icon | [`android-icon-foreground.png`](../assets/android-icon-foreground.png), [`-background.png`](../assets/android-icon-background.png), [`-monochrome.png`](../assets/android-icon-monochrome.png) | Background colour `#2E3A5A` (Airese navy) |
-| Splash | [`assets/splash-icon.png`](../assets/splash-icon.png) | The animated splash itself is a screen (`SplashScreen.tsx`) |
+| iOS / default icon | [`assets/icon.png`](../assets/icon.png) | **Placeholder:** still Expo's default template image |
+| Android adaptive icon | [`android-icon-foreground.png`](../assets/android-icon-foreground.png), [`-background.png`](../assets/android-icon-background.png), [`-monochrome.png`](../assets/android-icon-monochrome.png) | **Placeholder artwork** (Expo template) on Airese navy `#2E3A5A` |
+| Splash | [`assets/splash-icon.png`](../assets/splash-icon.png) | **Placeholder** (Expo template). The animated splash itself is a screen (`SplashScreen.tsx`) and uses the real logo |
 | Favicon (web preview) | [`assets/favicon.png`](../assets/favicon.png) | |
 
 ### Illustrations
@@ -445,6 +446,8 @@ Design-relevant packages (all Expo SDK 57 compatible):
 
 Things to tidy or decide before handover:
 
+- **App icon and splash icon are placeholders.** They're Expo's default template images. Replace them with the Airese mark before any store build.
+
 - **Unused:**
   - `Screen` and `SegmentedControl` are in the library but not used by any screen;
   - the horizontal logo (`airese-logo-hori.svg`) and `expo-haptics` aren't used.
@@ -465,4 +468,4 @@ Things to tidy or decide before handover:
 3. **Components:** one file in `src/components/`, exported from `index.ts`. Start with a short doc comment: what it is, how it behaves, its Reduce Motion behaviour, how it reads to screen readers.
 4. **Motion:** use `motion.slow` or `motion.fast` and one of their curves. Never a new duration or curve.
 5. **Icons:** copy the official Material Symbols path into `Icon.tsx`.
-6. **This page:** update it in the same change.
+6. **This page:** update it in the same change. The visual page regenerates itself from the code on every push; check it with `npm run design-system` (writes `preview-dist/design-system/index.html`).

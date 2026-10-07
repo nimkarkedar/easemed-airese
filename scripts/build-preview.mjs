@@ -3,7 +3,7 @@
  * for sharing as a link. Reuses the frame from public/iphone.html.
  * For day-to-day work use localhost instead: `npx expo start --web`, then /iphone.html.
  *
- *   npm run preview  →  preview-dist/index.html
+ *   npm run preview  →  preview-dist/index.html, plus the design system page (preview-dist/design-system/)
  */
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
@@ -57,3 +57,6 @@ mkdirSync(out, { recursive: true });
 writeFileSync(join(out, 'index.html'), html);
 rmSync(tmp, { recursive: true, force: true });
 console.log(`\nPreview written to preview-dist/index.html (${(html.length / 1024).toFixed(0)} KB)`);
+
+// The public design system page, published alongside: preview-dist/design-system/
+await import('./build-design-system.mjs');

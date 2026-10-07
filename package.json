@@ -36,6 +36,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "preview": "node scripts/build-preview.mjs",
+    "design-system": "node scripts/build-design-system.mjs",
     "lint": "expo lint"
   },
   "private": true
