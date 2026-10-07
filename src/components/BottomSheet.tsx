@@ -17,7 +17,7 @@ const TOP_STRIP = 88;
  * Opens: backdrop fades in while the sheet glides up (fast ease-out).
  * Closes: tap the backdrop, or drag the sheet down; it drifts away (fast ease-in).
  * `dragFrom="top"`: only the top strip (handle and title) drags, for sheets whose content
- * scrolls or swipes itself (e.g. the time wheels).
+ * scrolls or swipes itself (e.g. the remedies list in Night Notes).
  */
 export function BottomSheet({
   visible,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { AppText, BottomSheet, Button, ChipGroup, DetailPage, Icon, PAGE_SIDE, ToggleChip } from '../components';
-import { NOTE_GROUPS, REMEDY_GROUPS, isRemedy, labelOf, ordered, saveTonight, summarize, useNightNotes, type NoteGroup } from '../lib/nightNotes';
+import { NOTE_GROUPS, REMEDY_GROUPS, clearNightNotes, isRemedy, labelOf, ordered, saveTonight, summarize, useNightNotes, type NoteGroup } from '../lib/nightNotes';
 import { colors, radius, space, type } from '../theme';
 
 /**
@@ -70,6 +70,21 @@ export function NightNotesScreen({ onClose, slideIn = Platform.OS === 'web' }: {
                 </AppText>
               </Pressable>
             </View>
+          )}
+          {/* Forget them: the previous notes and anything picked tonight */}
+          {lastNight && lastNight.length > 0 && (
+            <Pressable
+              onPress={() => {
+                clearNightNotes();
+                setDraft([]);
+              }}
+              accessibilityRole="button"
+              style={styles.forget}
+            >
+              <AppText variant="small" color="accent">
+                Forget previous notes
+              </AppText>
+            </Pressable>
           )}
 
           {NOTE_GROUPS.map((group) => (
@@ -148,6 +163,7 @@ function Question({ group, selected, onToggle }: { group: NoteGroup; selected: s
 
 const styles = StyleSheet.create({
   side: { paddingHorizontal: PAGE_SIDE },
+  forget: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', paddingHorizontal: space.xs },
   shortcut: {
     marginTop: space.xl,
     flexDirection: 'row',

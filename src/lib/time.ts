@@ -1,27 +1,20 @@
-/** A time of day on a 12-hour clock, as the stop-time wheels show it. */
+/** A time of day on a 12-hour clock. */
 export type ClockTime = { hour: number; minute: number; period: 'AM' | 'PM' }; // hour 1–12
 
 const DAY = 24 * 60;
 
-/** Minutes since midnight. */
-export const toMinutes = (t: ClockTime) => ((t.hour % 12) + (t.period === 'PM' ? 12 : 0)) * 60 + t.minute;
-
+/** A clock time from minutes since midnight. */
 export function fromMinutes(minutes: number): ClockTime {
   const m = ((minutes % DAY) + DAY) % DAY;
   const h24 = Math.floor(m / 60);
   return { hour: h24 % 12 || 12, minute: m % 60, period: h24 < 12 ? 'AM' : 'PM' };
 }
 
-const nowMinutes = (now: Date) => now.getHours() * 60 + now.getMinutes();
+/** Recording runs until you stop it; this is the safety net if you forget (battery, storage). */
+export const MAX_RECORDING_MINUTES = 12 * 60;
 
-/** The recommended stop time: 8 hours from now. */
-export const eightHoursFrom = (now = new Date()) => fromMinutes(nowMinutes(now) + 8 * 60);
-
-/** Minutes from now until the next time the clock shows `t` (1 to 24 hours). */
-export function minutesUntil(t: ClockTime, now = new Date()) {
-  const d = (toMinutes(t) - nowMinutes(now) + DAY) % DAY;
-  return d === 0 ? DAY : d;
-}
+/** Whole minutes since `from`. */
+export const minutesSince = (from: Date, now = new Date()) => Math.max(0, Math.floor((now.getTime() - from.getTime()) / 60_000));
 
 /** "6 hr 30 min", "8 hr", "45 min" (BRAND.md: plain durations). */
 export function formatDuration(minutes: number) {

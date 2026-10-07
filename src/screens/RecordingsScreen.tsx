@@ -3,7 +3,7 @@ import { Animated, Platform, Pressable, StyleSheet, View, type LayoutChangeEvent
 import { StatusBar } from 'expo-status-bar';
 import { AmbientGradient, AppText, Avatar, BottomSheet, Button, Icon, PAGE_SIDE, PageTitle, TAB_BAR_CLEARANCE } from '../components';
 import { initials, useProfile } from '../lib/profile';
-import { byMonth, formatNightDate, formatRecorded, nextInsightIdea, sampleNights, type Night } from '../lib/recordings';
+import { byMonth, formatNightDate, formatRecorded, nextInsightIdea, useNights, type Night } from '../lib/recordings';
 import { nightDetails, sampleState, statusMark, summary } from '../lib/nightDetails';
 import { formatDuration } from '../lib/time';
 import { colors, motion, space, useInsets } from '../theme';
@@ -26,12 +26,12 @@ const TITLE_ROW = 44; // the large title's row (PageTitle)
  * status bar unprotected.
  * Direction: Figma "Recordings" (Oct 2026).
  */
-export function RecordingsScreen({ onOpen }: { onOpen: (night: Night) => void }) {
+export function RecordingsScreen({ onOpen, onOpenProfile }: { onOpen: (night: Night) => void; onOpenProfile?: () => void }) {
   const insets = useInsets();
   const profile = useProfile();
   const [width, setWidth] = useState(0);
   const [heroHeight, setHeroHeight] = useState(0);
-  const [nights] = useState(() => sampleNights());
+  const nights = useNights(); // empty after Profile → Delete all recordings
   const [sheet, setSheet] = useState(false);
   // Each row: the night's takeaway, so the list says enough to choose one (PRD: L0).
   const headline = (n: Night) => summary(nightDetails(n, sampleState(n, nights))).headline;
@@ -61,8 +61,9 @@ export function RecordingsScreen({ onOpen }: { onOpen: (night: Night) => void })
         {/* Hero: title and the overall insight on the gradient */}
         <View onLayout={(e: LayoutChangeEvent) => setHeroHeight(e.nativeEvent.layout.height)} style={{ paddingTop: insets.top + space.lg, paddingBottom: PANEL_RADIUS + space.xl }}>
           {width > 0 && heroHeight > 0 && <AmbientGradient width={width} height={heroHeight * GRADIENT_STRETCH} />}
-          <PageTitle title="Recordings" color="white" trailing={<Avatar initials={initials(profile)} />} />
+          <PageTitle title="Recordings" color="white" trailing={<Avatar initials={initials(profile)} onPress={onOpenProfile} />} />
 
+          {nights.length > 0 && (
           <View style={styles.insight}>
             <Icon name="lightbulb" size={28} color="lamp" />
             <View style={{ flex: 1 }}>
@@ -72,10 +73,22 @@ export function RecordingsScreen({ onOpen }: { onOpen: (night: Night) => void })
               {insight.action && <Button label={insight.action.label} onPress={act} style={styles.insightAction} />}
             </View>
           </View>
+          )}
         </View>
 
         {/* The list */}
         <View style={[styles.panel, { paddingBottom: TAB_BAR_CLEARANCE + insets.bottom }]}>
+          {nights.length === 0 && (
+            <View style={styles.empty}>
+              <Icon name="bedtime" size={36} color="textMuted" />
+              <AppText variant="heading" color="text" style={styles.center}>
+                No recordings yet
+              </AppText>
+              <AppText color="textMuted" style={styles.center}>
+                Tap the record button on Home at bedtime, and your nights will appear here.
+              </AppText>
+            </View>
+          )}
           {byMonth(nights).map((month) => (
             <View key={month.title} style={styles.section}>
               <AppText variant="caption" color="textMuted" accessibilityRole="header" style={styles.sectionTitle}>
@@ -128,6 +141,8 @@ export function RecordingsScreen({ onOpen }: { onOpen: (night: Night) => void })
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background, overflow: 'hidden' },
+  empty: { alignItems: 'center', gap: space.md, paddingHorizontal: space.xl, paddingTop: space.xxl * 2 },
+  center: { textAlign: 'center' },
   overscroll: { position: 'absolute', top: -1000, left: 0, right: 0, height: 1000, backgroundColor: colors.night },
   bar: {
     position: 'absolute',

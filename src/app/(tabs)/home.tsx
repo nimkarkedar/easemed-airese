@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { demoAfterFirstNight } from '../../lib/nightNotes';
-import { toMinutes } from '../../lib/time';
 import { HomeScreen } from '../../screens/HomeScreen';
 
 export default function Home() {
@@ -11,9 +10,8 @@ export default function Home() {
   return (
     <HomeScreen
       onOpenNotes={() => router.push('/night-notes')}
-      onStartRecording={(stopAt, from) =>
-        router.push({ pathname: '/recording', params: { stop: String(toMinutes(stopAt)), x: String(from.x), y: String(from.y), r: String(from.r) } })
-      }
+      onOpenProfile={() => router.push('/profile')}
+      onStartRecording={(from) => router.push({ pathname: '/recording', params: { x: String(from.x), y: String(from.y), r: String(from.r) } })}
     />
   );
 }

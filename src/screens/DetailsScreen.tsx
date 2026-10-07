@@ -2,18 +2,10 @@ import React, { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, type TextInput } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AppText, BottomSheet, Button, FormDivider, FormGroup, FormInput, InfoButton } from '../components';
-import { setProfile } from '../lib/profile';
+import { isValidEmail, isValidYear, setProfile } from '../lib/profile';
 import { colors, space, useInsets } from '../theme';
 
 const SIDE = space.gutter; // standard screen edge
-
-/** Four digits, from 1900 to this year. */
-function isValidYear(year: string) {
-  const y = Number(year);
-  return year.length === 4 && y >= 1900 && y <= new Date().getFullYear();
-}
-
-const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 
 /**
  * Last onboarding step (Figma "iPhone 16 & 17 Pro - 6"): name, year of birth and email.

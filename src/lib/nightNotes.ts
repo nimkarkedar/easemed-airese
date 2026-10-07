@@ -58,6 +58,12 @@ export function useNightNotes(): State {
 
 export const saveTonight = (ids: string[]) => set({ tonight: ordered(ids) });
 
+/** Profile → Clear Night Notes preferences: tonight's choices and the "same as last night" memory. */
+export const clearNightNotes = () => set({ tonight: [], lastNight: null });
+
+/** Delete account: everything, including the count of nights recorded. */
+export const resetNightNotes = () => set({ tonight: [], lastNight: null, nightsRecorded: 0 });
+
 /** A night was recorded: tonight's notes become last night's, and tomorrow starts empty. */
 export const finishNight = () => set({ lastNight: state.tonight.length ? state.tonight : state.lastNight, tonight: [], nightsRecorded: state.nightsRecorded + 1 });
 

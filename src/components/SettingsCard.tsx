@@ -5,7 +5,7 @@ import { AppText } from './AppText';
 import { Icon, type IconName } from './Icon';
 
 /**
- * A card of tappable rows, outlined in Breath, with an optional small title (e.g. Home's stop time and night notes).
+ * A card of tappable rows, outlined in Breath, with an optional small title (e.g. Home's Night Notes).
  * Rows are separated by hairlines. Each row is one button, at least 64 pt tall.
  */
 export function SettingsCard({ title, children }: { title?: string; children: React.ReactNode }) {

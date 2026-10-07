@@ -18,7 +18,6 @@ export * from './AmbientGradient';
 
 export * from './PageTitle';
 export * from './SettingsCard';
-export * from './TimeWheel';
 export * from './PermissionSheet';
 export * from './ToggleChip';
 export * from './DetailPage';
@@ -39,3 +38,5 @@ export * from './LoudnessBars';
 export * from './ClipPlayer';
 export * from './ScoreTile';
 export * from './SnoringChart';
+export * from './SettingRows';
+export * from './Toast';

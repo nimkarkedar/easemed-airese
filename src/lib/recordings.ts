@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from 'react';
+import { recall, remember } from './session';
 import { formatClock, formatDuration, fromMinutes } from './time';
 
 /**
@@ -31,6 +33,45 @@ export function sampleNights(today = new Date()): Night[] {
     const id = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     return { id, date, startMinutes: start, minutes };
   });
+}
+
+/**
+ * The nights to list. Profile → Delete all recordings empties it for the rest of the session.
+ * Engineering: delete the audio clips and analysis from the device, not just the list.
+ */
+let deleted: boolean = recall('recordingsDeleted', false);
+const listeners = new Set<() => void>();
+
+export function deleteAllRecordings() {
+  deleted = true;
+  remember('recordingsDeleted', true);
+  listeners.forEach((l) => l());
+}
+
+/** Delete account starts over: the sample nights come back for the next demo run. */
+export function restoreSampleRecordings() {
+  deleted = false;
+  remember('recordingsDeleted', false);
+  listeners.forEach((l) => l());
+}
+
+const EMPTY: Night[] = [];
+let cache: { day: string; nights: Night[] } | null = null;
+function current(): Night[] {
+  if (deleted) return EMPTY;
+  const day = new Date().toDateString();
+  if (cache?.day !== day) cache = { day, nights: sampleNights() };
+  return cache.nights;
+}
+
+export function useNights(): Night[] {
+  return useSyncExternalStore(
+    (l) => {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+    current,
+  );
 }
 
 /** A night by id; "latest" is the most recent (used by the demo menu). */

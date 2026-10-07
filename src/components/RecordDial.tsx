@@ -4,45 +4,39 @@ import Svg, { Defs, LinearGradient, RadialGradient, Circle, Stop } from 'react-n
 import { colors, gradients, motion, space, useReducedMotion } from '../theme';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
-import { holdSafeStyle, useNoContextMenu } from './holdSafe';
 
 const native = motion.useNativeDriver;
 const TICKS = 60;
 const TICK_W = 3;
 const TICK_H = 12;
 const DIM = 0.3; // unlit tick
-const HOLD = motion.slow.duration; // how long to hold before recording starts
 const BUTTON = 0.64; // button diameter as a share of the dial
 const TRAIL = 0.22; // share of the ring the travelling light's tail covers
 
 /**
  * The record button: a big round mic inside a ring of ticks, the one "larger than life" element.
  *
- * Press and hold: the ticks light up around the ring (slow preset) and recording starts when the
- * ring is full, so a stray tap at bedtime never starts a night. Let go early and the ring drains
- * away (fast ease-out). At rest the button breathes very gently (ambient preset), and now and then
- * a light runs once round the ring (attention preset) to invite a press.
+ * Tap: the ticks light up round the ring (fast ease-out) and recording starts when it's full.
+ * Stopping asks to confirm, so a stray tap costs nothing. At rest the button breathes very gently
+ * (ambient preset), and now and then a light runs once round the ring (attention preset) to invite a tap.
  * Under it, the status line and an optional note, in one small muted block.
- * Screen readers: a plain button; double tap starts at once (WCAG 2.5.1).
- * Reduce Motion: no breathing or travelling light; the ring still fills, since it shows how long is left to hold.
+ * Reduce Motion: no breathing or travelling light; the ring fills at once.
  */
 /** Where the button is on screen (window coordinates), for transitions that grow out of it. */
 export type DialRect = { x: number; y: number; width: number; height: number; button: number };
 
 /**
- * `ready`: false while something must happen first (e.g. the microphone is off). A full hold then
+ * `ready`: false while something must happen first (e.g. the microphone is off). A tap then
  * calls onStart (to ask for it) and the dial resets at once, without saying "Recording started".
  */
 export function RecordDial({ size, note, ready = true, onStart }: { size: number; note?: string; ready?: boolean; onStart?: (from: DialRect) => void }) {
   const ringRef = useRef<View>(null);
-  useNoContextMenu(ringRef); // mobile browsers: no long-press menu mid-hold
   const reduced = useReducedMotion();
-  const progress = useRef(new Animated.Value(0)).current; // 0 → 1 while held
+  const progress = useRef(new Animated.Value(0)).current; // 0 → 1 as the ring lights after a tap
   const press = useRef(new Animated.Value(0)).current; // 0 → 1 while the finger is down
   const breath = useRef(new Animated.Value(0)).current;
   const sweep = useRef(new Animated.Value(0)).current; // light running round the ring: 0 → 1 + TRAIL
-  const [state, setState] = useState<'idle' | 'holding' | 'started'>('idle');
-  const run = useRef<Animated.CompositeAnimation | null>(null);
+  const [state, setState] = useState<'idle' | 'starting' | 'started'>('idle');
 
   useEffect(() => {
     if (reduced) return breath.setValue(0);
@@ -52,7 +46,7 @@ export function RecordDial({ size, note, ready = true, onStart }: { size: number
     return () => loop.stop();
   }, [breath, reduced]);
 
-  // At rest, a light runs round the ring now and then, inviting a press. Paused while held.
+  // At rest, a light runs round the ring now and then, inviting a tap.
   useEffect(() => {
     if (reduced || state !== 'idle') return sweep.setValue(0);
     const lap = Animated.loop(
@@ -83,21 +77,13 @@ export function RecordDial({ size, note, ready = true, onStart }: { size: number
     }, motion.slow.duration);
   };
 
-  const pressIn = () => {
-    if (state === 'started') return;
-    setState('holding');
-    Animated.timing(press, { toValue: 1, duration: motion.fast.duration, easing: motion.fast.easeOut, useNativeDriver: native }).start();
-    run.current = Animated.timing(progress, { toValue: 1, duration: HOLD, easing: motion.slow.easeInOut, useNativeDriver: native });
-    run.current.start(({ finished }) => finished && start());
+  const tap = () => {
+    if (state !== 'idle') return;
+    setState('starting');
+    if (reduced) return start();
+    Animated.timing(progress, { toValue: 1, duration: motion.fast.duration, easing: motion.fast.easeOut, useNativeDriver: native }).start(({ finished }) => finished && start());
   };
-
-  const pressOut = () => {
-    Animated.timing(press, { toValue: 0, duration: motion.fast.duration, easing: motion.fast.easeOut, useNativeDriver: native }).start();
-    if (state === 'started') return;
-    run.current?.stop();
-    Animated.timing(progress, { toValue: 0, duration: motion.fast.duration, easing: motion.fast.easeOut, useNativeDriver: native }).start();
-    setState((s) => (s === 'started' ? s : 'idle'));
-  };
+  const pressTo = (v: number) => Animated.timing(press, { toValue: v, duration: motion.fast.duration, easing: motion.fast.easeOut, useNativeDriver: native }).start();
 
   const button = Math.round(size * BUTTON);
   const radius = size / 2 - TICK_H / 2 - 4;
@@ -105,8 +91,8 @@ export function RecordDial({ size, note, ready = true, onStart }: { size: number
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <View ref={ringRef} style={[{ width: size, height: size }, holdSafeStyle]}>
-        {/* Ring of ticks: each lights as the hold passes it */}
+      <View ref={ringRef} style={{ width: size, height: size }}>
+        {/* Ring of ticks: they light round the ring after a tap */}
         {Array.from({ length: TICKS }, (_, i) => (
           <Animated.View
             key={i}
@@ -157,16 +143,12 @@ export function RecordDial({ size, note, ready = true, onStart }: { size: number
           ]}
         >
           <Pressable
-            // A hold must not be taken over by the panel's pull-down or a scroll.
-            cancelable={false}
-            onPressIn={pressIn}
-            onPressOut={pressOut}
-            onAccessibilityAction={(e) => e.nativeEvent.actionName === 'activate' && state !== 'started' && start()}
-            accessibilityActions={[{ name: 'activate' }]}
+            onPress={tap}
+            onPressIn={() => pressTo(1)}
+            onPressOut={() => pressTo(0)}
             accessibilityRole="button"
             accessibilityLabel="Start recording"
-            accessibilityHint="Press and hold to start"
-            style={[styles.button, { width: button, height: button, borderRadius: button / 2 }, holdSafeStyle]}
+            style={[styles.button, { width: button, height: button, borderRadius: button / 2 }]}
           >
             <Svg style={StyleSheet.absoluteFill} width={button} height={button}>
               <Defs>
@@ -192,7 +174,7 @@ export function RecordDial({ size, note, ready = true, onStart }: { size: number
       </View>
 
       <AppText variant="small" color="textMuted" accessibilityLiveRegion="polite" style={{ marginTop: space.md, textAlign: 'center' }}>
-        {state === 'idle' ? 'Press and hold to start recording' : state === 'holding' ? 'Keep holding' : 'Recording started'}
+        {state === 'started' ? 'Recording started' : 'Tap to start recording'}
       </AppText>
       {note ? (
         <AppText variant="small" color="textMuted" style={{ textAlign: 'center' }}>

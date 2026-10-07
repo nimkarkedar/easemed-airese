@@ -71,6 +71,7 @@
         <option value="home-after-first-night">Home · after first night</option>
         <option value="recording">Recording Sleep</option>
         <option value="recordings">Recordings</option>
+        <option value="profile">Profile</option>
       </optgroup>
       <optgroup label="Recording details">
         <option value="night-steady">Ordinary night</option>
@@ -112,7 +113,7 @@
   // Demo: jump to a screen. On localhost the phone loads that route; in the shared preview
   // (no router) the app listens for 'airese:jump'. Either way the menu follows the app.
   (function () {
-    var ROUTES = { splash: '/', onboarding: '/onboarding', microphone: '/permissions/microphone', notifications: '/permissions/notifications', details: '/details', home: '/home', 'home-after-first-night': '/home?state=after-first-night', recording: '/recording', recordings: '/recordings',
+    var ROUTES = { splash: '/', onboarding: '/onboarding', microphone: '/permissions/microphone', notifications: '/permissions/notifications', details: '/details', home: '/home', 'home-after-first-night': '/home?state=after-first-night', recording: '/recording', recordings: '/recordings', profile: '/profile',
       'night-steady': '/night/latest?state=steady', 'night-unusual': '/night/latest?state=unusual', 'night-pattern': '/night/latest?state=pattern',
       'night-first': '/night/latest?state=first', 'night-poor': '/night/latest?state=poor', 'night-processing': '/night/latest?state=processing' };
     var select = document.getElementById('jump');

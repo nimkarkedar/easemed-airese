@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, AppState, PanResponder, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { AmbientGradient, AppText, Avatar, BottomSheet, Button, Icon, PAGE_SIDE, PageTitle, PermissionSheet, RecordDial, SettingsCard, SettingsRow, TAB_BAR_CLEARANCE, type DialRect, TimeWheel } from '../components';
+import { AmbientGradient, AppText, Avatar, Icon, PAGE_SIDE, PageTitle, PermissionSheet, RecordDial, SettingsCard, SettingsRow, TAB_BAR_CLEARANCE, type DialRect } from '../components';
 import { initials, useProfile } from '../lib/profile';
-import { eightHoursFrom, formatClock, formatDuration, minutesUntil, type ClockTime } from '../lib/time';
 import { refreshPermissions, usePermissionStatus, type PermissionKind } from '../lib/permissionStatus';
 import { needsNotes, summarize, useNightNotes } from '../lib/nightNotes';
 import { MICROPHONE_OFF, NOTIFICATIONS_OFF, randomTips, type Tip } from '../lib/tips';
@@ -15,7 +14,8 @@ const DIAL_MAX = 180; // present, not loud
 const DIAL_LABEL = 56; // room under the dial for its two lines
 
 /**
- * Home: set when recording stops, then press and hold the dial to start.
+ * Home: tap the dial to start. Recording runs until you stop it when you wake (no stop time to
+ * choose at bedtime; it stops by itself after 12 hours as a safety net).
  *
  * Layers, back to front:
  *   1. A night-to-blue gradient with a slow, faint drift of light (ambient preset), so the screen feels alive.
@@ -29,7 +29,7 @@ const DIAL_LABEL = 56; // room under the dial for its two lines
 /** Where the record button sits, in Home's own coordinates, so Recording can grow out of it. */
 export type RecordOrigin = { x: number; y: number; r: number };
 
-export function HomeScreen({ onStartRecording, onOpenNotes }: { onStartRecording?: (stopAt: ClockTime, from: RecordOrigin) => void; onOpenNotes?: () => void }) {
+export function HomeScreen({ onStartRecording, onOpenNotes, onOpenProfile }: { onStartRecording?: (from: RecordOrigin) => void; onOpenNotes?: () => void; onOpenProfile?: () => void }) {
   const notes = useNightNotes();
   const rootRef = useRef<View>(null);
   const insets = useInsets();
@@ -64,39 +64,19 @@ export function HomeScreen({ onStartRecording, onOpenNotes }: { onStartRecording
   const [full, setFull] = useState(0);
   const { open, toggle, pan, pull } = usePullDown(Math.max(0, full - peek));
 
-  // Stop time
-  const [stopAt, setStopAt] = useState<ClockTime | null>(null); // null: the recommended 8 hours
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [draft, setDraft] = useState<ClockTime>(() => eightHoursFrom());
-  const [changed, setChanged] = useState(false);
   const [dialRoom, setDialRoom] = useState({ width: 0, height: 0 });
   const dialSize = Math.floor(Math.min(DIAL_MAX, dialRoom.width, dialRoom.height - DIAL_LABEL));
 
-  const editStop = () => {
-    setDraft(stopAt ?? eightHoursFrom());
-    setChanged(!!stopAt);
-    setSheetOpen(true);
-  };
-  const done = () => {
-    if (changed) setStopAt(draft); // untouched: stay on the recommended 8 hours
-    setSheetOpen(false);
-  };
-  const useEight = () => {
-    setStopAt(null);
-    setSheetOpen(false);
-  };
-
-  // Hold complete: hand over the stop time and where the button is (window → Home coordinates,
-  // allowing for the preview's scaled phone frame).
+  // Tapped: hand over where the button is (window → Home coordinates, allowing for the preview's
+  // scaled phone frame). Recording runs until you stop it in the morning (12-hour safety cap).
   const startRecording = (dial: DialRect, micJustAllowed = false) => {
     if (micOff && !micJustAllowed) {
       pendingStart.current = dial;
       return ask('microphone');
     }
-    const stop = stopAt ?? eightHoursFrom();
     rootRef.current?.measureInWindow((rx, ry, rw) => {
       const k = width > 0 && rw > 0 ? width / rw : 1;
-      onStartRecording?.(stop, { x: (dial.x - rx + dial.width / 2) * k, y: (dial.y - ry + dial.height / 2) * k, r: (dial.button / 2) * k });
+      onStartRecording?.({ x: (dial.x - rx + dial.width / 2) * k, y: (dial.y - ry + dial.height / 2) * k, r: (dial.button / 2) * k });
     });
   };
 
@@ -113,7 +93,7 @@ export function HomeScreen({ onStartRecording, onOpenNotes }: { onStartRecording
       {width > 0 && <AmbientGradient width={width} height={heroHeight} />}
 
       <View style={{ paddingTop: insets.top + space.lg }}>
-        <PageTitle title="Home" color="white" trailing={<Avatar initials={initials(profile)} />} />
+        <PageTitle title="Home" color="white" trailing={<Avatar initials={initials(profile)} onPress={onOpenProfile} />} />
       </View>
 
       <View style={styles.stage} onLayout={(e: LayoutChangeEvent) => setStageTop(e.nativeEvent.layout.y)}>
@@ -132,14 +112,6 @@ export function HomeScreen({ onStartRecording, onOpenNotes }: { onStartRecording
 
           <View style={{ marginTop: space.sm }}>
             <SettingsCard>
-              <SettingsRow
-                icon="bedtime"
-                title={stopAt ? `Recording until ${formatClock(stopAt)}` : '8 hours recording'}
-                subtitle={stopAt ? `${formatDuration(minutesUntil(stopAt))} from now` : 'Recommended'}
-                trailing="edit"
-                onPress={editStop}
-                accessibilityLabel={`${stopAt ? `Recording until ${formatClock(stopAt)}` : '8 hours recording, recommended'}. Change`}
-              />
               {/* After a first night: a gentle nudge while tonight's notes are empty */}
               <SettingsRow
                 icon="edit_note"
@@ -173,25 +145,6 @@ export function HomeScreen({ onStartRecording, onOpenNotes }: { onStartRecording
         }}
       />
 
-      <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} dragFrom="top">
-        <AppText variant="heading" color="text" accessibilityRole="header" style={styles.center}>
-          Stop recording at
-        </AppText>
-        <View style={{ marginTop: space.xl }}>
-          <TimeWheel
-            value={draft}
-            onChange={(t) => {
-              setDraft(t);
-              setChanged(true);
-            }}
-          />
-        </View>
-        <AppText variant="small" color="textMuted" accessibilityLiveRegion="polite" style={[styles.center, { marginTop: space.xl }]}>
-          {changed ? `Your selection gives ${formatDuration(minutesUntil(draft))} of sleep` : '8 hours of sleep recommended'}
-        </AppText>
-        <Button label="Done" onPress={done} style={{ marginTop: space.xl }} />
-        {stopAt && <Button label="Use 8 hours" variant="quiet" onPress={useEight} style={{ marginTop: space.sm }} />}
-      </BottomSheet>
     </View>
   );
 }
@@ -324,5 +277,4 @@ const styles = StyleSheet.create({
   grabZone: { height: 44, alignItems: 'center', justifyContent: 'center' },
   grabber: { width: 36, height: 5, borderRadius: 3, backgroundColor: colors.textMuted },
   dialArea: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: space.xs, marginBottom: space.sm },
-  center: { textAlign: 'center' },
 });

@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AmbientGradient, AppText, BottomSheet, Button, Icon, InfoButton, ListeningRing, PAGE_SIDE } from '../components';
-import { formatClock, formatDuration, minutesUntil, type ClockTime } from '../lib/time';
-import { colors, gradients, motion, radius, space, useInsets, useReducedMotion } from '../theme';
+import { MAX_RECORDING_MINUTES, formatClock, formatDuration, fromMinutes, minutesSince } from '../lib/time';
+import { colors, gradients, motion, radius, space, type, useInsets, useReducedMotion } from '../theme';
 import type { RecordOrigin } from './HomeScreen';
 
 const native = motion.useNativeDriver;
@@ -18,10 +18,11 @@ const GRADIENT_STRETCH = 1.4;
  * the words rise into place and the listening ring opens out (slow ease-out, staggered).
  * Reduce Motion: no growing circle; the screen fades in.
  *
- * Stop: tap the button, then confirm, so a half-asleep tap never ends the night.
+ * Runs until you stop it when you wake: tap the button, then confirm, so a half-asleep tap never
+ * ends the night. Stops by itself after 12 hours (MAX_RECORDING_MINUTES) if you forget.
  * Direction: Figma "iPhone 16 & 17 Pro - 15" (Oct 2026).
  */
-export function RecordingScreen({ stopAt, from, onStop }: { stopAt: ClockTime; from?: RecordOrigin; onStop: () => void }) {
+export function RecordingScreen({ startedAt, from, onStop }: { startedAt: Date; from?: RecordOrigin; onStop: () => void }) {
   const insets = useInsets();
   const reduced = useReducedMotion();
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -34,11 +35,16 @@ export function RecordingScreen({ stopAt, from, onStop }: { stopAt: ClockTime; f
   const surface = useRef(new Animated.Value(0)).current; // this screen fading in over the blue
   const ring = useRef(new Animated.Value(0)).current; // the listening ring opening out
 
-  // "8 hr from now" stays true through the night.
+  // "Recording for …" stays true through the night; the safety cap ends it after 12 hours.
+  const elapsed = minutesSince(startedAt);
+  const capAt = fromMinutes(startedAt.getHours() * 60 + startedAt.getMinutes() + MAX_RECORDING_MINUTES);
   useEffect(() => {
     const id = setInterval(() => tick((n) => n + 1), 60_000);
     return () => clearInterval(id);
   }, []);
+  useEffect(() => {
+    if (elapsed >= MAX_RECORDING_MINUTES) onStop();
+  }, [elapsed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (size.width === 0) return;
@@ -107,7 +113,6 @@ export function RecordingScreen({ stopAt, from, onStop }: { stopAt: ClockTime; f
       },
     ],
   });
-  const stopsIn = formatDuration(minutesUntil(stopAt));
 
   return (
     <View style={styles.root} onLayout={(e: LayoutChangeEvent) => setSize(e.nativeEvent.layout)}>
@@ -149,9 +154,13 @@ export function RecordingScreen({ stopAt, from, onStop }: { stopAt: ClockTime; f
           <AppText variant="title" color="white" accessibilityRole="header">
             Recording Sleep
           </AppText>
-          <AppText color="text" style={{ marginTop: space.xs }}>
-            Recording on your phone privately.
-          </AppText>
+          {/* Smart listening, with (i) for how recording works */}
+          <View style={styles.subtitle}>
+            <AppText color="text" style={{ flex: 1 }}>
+              Private and smart listening.
+            </AppText>
+            <InfoButton color="textMuted" label="How recording works" onPress={() => setInfo(true)} />
+          </View>
         </Animated.View>
 
         {/* Info card: close it and it fades, then the space closes up so the ring can grow */}
@@ -168,9 +177,8 @@ export function RecordingScreen({ stopAt, from, onStop }: { stopAt: ClockTime; f
               >
                 <View style={styles.card}>
                   <AppText color="onAccent" style={{ flex: 1 }}>
-                    Smart listening. Only snoring is recorded.
+                    Keep Airese open while you sleep. You can lock your phone now.
                   </AppText>
-                  <InfoButton color="onAccent" label="How recording works" onPress={() => setInfo(true)} />
                 </View>
                 {/* Floating close button on the corner; 44 pt tap area */}
                 <Pressable onPress={closeCard} hitSlop={8} style={styles.close} accessibilityRole="button" accessibilityLabel="Close">
@@ -202,11 +210,16 @@ export function RecordingScreen({ stopAt, from, onStop }: { stopAt: ClockTime; f
         </View>
 
         <Animated.View style={[styles.note, rise(8), { marginBottom: Math.max(insets.bottom, space.lg) + space.xl }]}>
-          <AppText variant="small" color="text" style={styles.center}>
-            Tap to stop recording
-          </AppText>
-          <AppText variant="small" color="text" style={styles.center}>
-            {`Automatically stops at\n${formatClock(stopAt)} (${stopsIn} from now)`}
+          <Elapsed startedAt={startedAt} />
+          {/* The safety net, said plainly: a chip, not a footnote */}
+          <View style={styles.cap} accessible accessibilityLabel={`Stops by itself after ${MAX_RECORDING_MINUTES / 60} hours, at ${formatClock(capAt)}`}>
+            <Icon name="schedule" size={20} color="text" />
+            <AppText color="text" style={{ flexShrink: 1 }}>
+              {`Stops by itself after ${MAX_RECORDING_MINUTES / 60} hours`}
+            </AppText>
+          </View>
+          <AppText color="textMuted" style={[styles.center, { marginTop: space.lg }]}>
+            Tap to stop when you wake up
           </AppText>
         </Animated.View>
       </View>
@@ -216,7 +229,7 @@ export function RecordingScreen({ stopAt, from, onStop }: { stopAt: ClockTime; f
           Stop recording?
         </AppText>
         <AppText color="textMuted" style={[styles.center, { marginTop: space.sm }]}>
-          Airese keeps what it has recorded so far.
+          Airese will look through your night.
         </AppText>
         <Button
           label="Stop recording"
@@ -237,8 +250,48 @@ export function RecordingScreen({ stopAt, from, onStop }: { stopAt: ClockTime; f
   );
 }
 
+/**
+ * "Recording for 02:14": hours and minutes since the start, the colon blinking once a second
+ * (fast preset, in and out) like a running clock. Reduce Motion: a steady colon.
+ * Screen readers hear "Recording for 2 hr 14 min", updated each minute, never the blink.
+ */
+function Elapsed({ startedAt }: { startedAt: Date }) {
+  const reduced = useReducedMotion();
+  const [, tick] = useState(0);
+  const blink = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 5_000); // catches each new minute within a few seconds
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    if (reduced) return blink.setValue(1);
+    const half = { duration: motion.fast.duration, easing: motion.fast.easeInOut, useNativeDriver: native };
+    const loop = Animated.loop(Animated.sequence([Animated.timing(blink, { toValue: 0.15, ...half }), Animated.timing(blink, { toValue: 1, ...half })]));
+    loop.start();
+    return () => loop.stop();
+  }, [blink, reduced]);
+
+  const m = minutesSince(startedAt);
+  const two = (n: number) => String(n).padStart(2, '0');
+  return (
+    <View style={styles.clock} accessible accessibilityLabel={`Recording for ${formatDuration(m)}`}>
+      <AppText variant="heading" color="text">
+        Recording for{' '}
+      </AppText>
+      <AppText variant="heading" color="text" style={styles.digits}>
+        {two(Math.floor(m / 60))}
+      </AppText>
+      <Animated.Text style={[type.heading, { color: colors.text, opacity: blink }]}>:</Animated.Text>
+      <AppText variant="heading" color="text" style={styles.digits}>
+        {two(m % 60)}
+      </AppText>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, overflow: 'hidden' },
+  subtitle: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.xs },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -270,6 +323,22 @@ const styles = StyleSheet.create({
   note: {
     paddingHorizontal: PAGE_SIDE,
     marginTop: space.lg,
+    alignItems: 'center',
+  },
+  clock: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
+  digits: { fontVariant: ['tabular-nums'] },
+  cap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    minHeight: 44,
+    marginTop: space.md,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(238, 241, 247, 0.12)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(238, 241, 247, 0.35)',
   },
   center: { textAlign: 'center' },
 });
