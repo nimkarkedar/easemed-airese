@@ -5,7 +5,7 @@ import { AppText, Button, Icon, MonthCalendar, titleControl, PAGE_SIDE, Permissi
 import { nightState } from '../lib/nightDetails';
 import { usePermissionStatus } from '../lib/permissionStatus';
 import { setNotificationPref, useNotificationPrefs } from '../lib/profile';
-import { useNights } from '../lib/recordings';
+import { useAnalysing, useNights } from '../lib/recordings';
 import { MISSED_NIGHTS_NUDGE, calendarNights, dayKey, recordedOfRecent } from '../lib/reports';
 import { colors, radius, space, useInsets } from '../theme';
 import { NightScreen } from './NightScreen';
@@ -24,11 +24,14 @@ export function ReportsScreen({ demoState, onRecordAgain }: { demoState?: string
   const latest = nights[0];
   const [selected, setSelected] = useState<string | undefined>(latest?.id);
   const [calendar, setCalendar] = useState(false);
+  // Straight after a recording: the latest night, "Looking through your night", then its report.
+  const analysing = useAnalysing();
+  if (analysing && latest && selected !== latest.id) setSelected(latest.id);
   const night = (selected && map.get(selected)?.night) || latest;
 
   if (!night) return <NoReports onRecordAgain={onRecordAgain} />;
 
-  const state = night === latest && demoState ? nightState(night, demoState) : nightState(night);
+  const state = night === latest && analysing ? 'processing' : night === latest && demoState ? nightState(night, demoState) : nightState(night);
   // Only last night (the night that started yesterday) gets a tag; every other night shows just its date.
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
@@ -36,7 +39,7 @@ export function ReportsScreen({ demoState, onRecordAgain }: { demoState?: string
   return (
     <View style={styles.root}>
       <NightScreen
-        key={night.id}
+        key={`${night.id}${state === 'processing' ? ':analysing' : ''}`} // analysis done: the report arrives
         night={night}
         state={state}
         bottomInset={TAB_BAR_CLEARANCE}

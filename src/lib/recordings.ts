@@ -63,6 +63,36 @@ function current(): Night[] {
   return cache.nights;
 }
 
+/**
+ * Straight after a recording stops, Reports shows "Looking through your night", then the report.
+ * Every other visit shows the report directly. Prototype: a fixed wait.
+ * Engineering: true while the night's analysis is still running.
+ */
+const ANALYSING_MS = 6000;
+let analysing = false;
+let analysingTimer: ReturnType<typeof setTimeout> | undefined;
+const analysingListeners = new Set<() => void>();
+
+export function startAnalysing() {
+  clearTimeout(analysingTimer);
+  analysing = true;
+  analysingListeners.forEach((l) => l());
+  analysingTimer = setTimeout(() => {
+    analysing = false;
+    analysingListeners.forEach((l) => l());
+  }, ANALYSING_MS);
+}
+
+export function useAnalysing(): boolean {
+  return useSyncExternalStore(
+    (l) => {
+      analysingListeners.add(l);
+      return () => analysingListeners.delete(l);
+    },
+    () => analysing,
+  );
+}
+
 export function useNights(): Night[] {
   return useSyncExternalStore(
     (l) => {

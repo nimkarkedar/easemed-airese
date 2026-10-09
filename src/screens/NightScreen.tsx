@@ -66,8 +66,6 @@ const SHEET_TITLE: Record<Sheet, string> = {
   recent: 'Your recent nights',
 };
 
-const PROCESSING_DEMO_MS = 6000; // prototype: how long "Looking through your night" shows before results
-
 /**
  * Recording Details (L1): one night as a series of cards in two shapes (wide and square). Each
  * card has a visual, one line of insight and "›" to a large sheet with the full story.
@@ -107,7 +105,7 @@ export function NightScreen({
   /** "Record again tonight": where that goes (Reports: to Home). Defaults to going back. */
   onRecordAgain?: () => void;
 }) {
-  const [state, setState] = useState(initialState);
+  const [state] = useState(initialState); // fixed for this page: a later change of the demo param doesn't swap it
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [lastSheet, setLastSheet] = useState<Sheet>('report');
   const [explain, setExplain] = useState<ExplainKey | 'care' | 'remedy' | null>(null);
@@ -116,12 +114,6 @@ export function NightScreen({
   const d = nightDetails(night, state === 'processing' ? 'steady' : state);
   // The moment in the player: a breathing pause if there was one (the clearest proof), else the first.
   const [selected, setSelected] = useState((d.featured.find((c) => c.type === 'Interrupted breathing') ?? d.featured[0])?.id);
-
-  useEffect(() => {
-    if (state !== 'processing') return;
-    const id = setTimeout(() => setState('steady'), PROCESSING_DEMO_MS);
-    return () => clearTimeout(id);
-  }, [state]);
 
   const open = (s: Sheet) => {
     setLastSheet(s);
