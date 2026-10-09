@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { clockAt, type Clip, type NightDetails } from '../lib/nightDetails';
-import { colors, motion, space, useReducedMotion } from '../theme';
+import { alpha, colors, motion, space, useReducedMotion } from '../theme';
 import { AppText } from './AppText';
 
 const SLEEP_H = 4;
@@ -52,9 +52,9 @@ export function NightTimeline({ details, full = false, clips = [], playing, onCl
             {/* Grid: faint hour lines and the baseline (static) */}
             <Svg width={width} height={H} style={StyleSheet.absoluteFill}>
               {hours.map((m) => (
-                <Line key={m} x1={x(m)} x2={x(m)} y1={0} y2={H} stroke="rgba(179, 189, 211, 0.08)" strokeWidth={1} />
+                <Line key={m} x1={x(m)} x2={x(m)} y1={0} y2={H} stroke={alpha(colors.mist, 0.08)} strokeWidth={1} />
               ))}
-              <Line x1={0} x2={width} y1={H - 0.5} y2={H - 0.5} stroke="rgba(179, 189, 211, 0.25)" strokeWidth={1} />
+              <Line x1={0} x2={width} y1={H - 0.5} y2={H - 0.5} stroke={alpha(colors.mist, 0.25)} strokeWidth={1} />
             </Svg>
 
             {/* Marks: grow up from the baseline */}

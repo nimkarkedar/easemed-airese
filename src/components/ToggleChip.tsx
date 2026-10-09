@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { colors, radius, space } from '../theme';
+import { alpha, colors, radius, space } from '../theme';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
 
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(179, 189, 211, 0.28)', // Mist, faint
+    borderColor: alpha(colors.mist, 0.28), // Mist, faint
   },
   selected: {
     backgroundColor: colors.surface, // Deep

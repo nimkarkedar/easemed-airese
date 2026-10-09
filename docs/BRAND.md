@@ -27,6 +27,21 @@ Each step needs its own message. Jumping straight from dismissal to fear makes p
 
 What snorers say before they hear a recording: "I didn't know that I snored at all." After a recording: "…and actually heard myself." **Recordings are the main proof.**
 
+### What makes Airese different
+
+For Singapore and Malaysia, the first step has to feel private, simple, and worth trusting. These four promises shape what the app says about itself (onboarding, permissions, store listing). They don't change the four voice principles.
+
+| Promise | Means |
+| --- | --- |
+| **Private by default** | Start at home, before a clinic, test, or insurance question. |
+| **Nothing extra to buy** | Your phone does the work. No watch, ring, mat, or extra hardware. |
+| **Evidence you can hear** | Airese turns the night into short moments, patterns, and proof. |
+| **A clearer next step** | Know when to watch, when to share, and when to get checked. |
+
+**Local insight:** people may want to understand what is happening before entering the healthcare system.
+
+**Journey ownership:** Marketing earns the first night. Product earns belief. Care earns action.
+
 ---
 
 ## 2. Product principles
@@ -95,7 +110,7 @@ Your breathing paused often on 5 of the last 7 nights.
 This is worth getting checked by a doctor.
 
 [ Share report with a doctor ]   ← primary
-  Contact Easmed                 ← quiet
+  Contact Airese Support         ← quiet
 ```
 
 Wording and thresholds depend on what Engineering can detect with confidence.
@@ -105,7 +120,7 @@ Wording and thresholds depend on what Engineering can detect with confidence.
 | Moment | Feels | Airese says |
 | --- | --- | --- |
 | First open | Curious | Let's find out what happens while you sleep. |
-| Mic permission | Upfront | Airese listens all night for snoring and breathing. Your data stays on your device. Private and safe. |
+| Mic permission | Upfront | Airese listens all night for snoring and breathing. Your recordings stay on your phone. Private and safe. |
 | Good night | Quiet | A steadier night. |
 | A recording | Matter of fact | 2:14 am. 40 seconds. Have a listen. |
 | Sharing with a partner | Kind | Here's what last night sounded like. |
@@ -210,16 +225,19 @@ Easmed's medical B2B tools and Airese show the same data, but they're built diff
 | Snoring | Ember `#FFAA5C` | `dataSnoring` |
 | Breathing interruptions | Iris `#B9A3FF` | `dataBreathing` |
 | Sleep and rest | Dew `#8EE3CF` | `dataSleep` |
-| Snoring loudness (light → very loud) | `#FFD9B0` · `#FFC285` · `#FFAA5C` · `#F28B3D` | `loudness` |
+| Snoring loudness (quiet → very loud) | `#2EC9EA` · `#FFD84A` · `#FF9A3C` · Flare `#FF5A4F` | `loudness` |
 
 - Checked together on Deep and Midnight with the dataviz palette validator: colour-blind separation ΔE ≥ 12, normal vision ≥ 19, 3:1+ contrast.
 - **Breath stays out of charts.** It's the UI colour (buttons, links), and it's too close to Iris for colour-blind readers.
-- Loudness is one hue, light to deep: magnitude, so never a rainbow, and **never red**.
+- Loudness runs cyan → yellow → orange → red (Oct 2026). Each colour is pinned to a decibel level, so only truly loud snoring reaches red. **Charts and graphs only**: never text, buttons or UI chrome.
 - Comparison bars: tonight in the data colour, earlier nights in neutral grey (faded Ember turns muddy on Deep).
 - Charts always label or shape their marks too, so colour is never the only cue.
-- **Status marks** on a night's headline: Dew ✓ for steady, Lamp ↗ for unusual, Lamp 👁 for "worth a closer look". Calm, never red.
+- **Graphs behind text** (the verdict card) keep a readability budget: everything behind the words together (card gradient, glow, fill, line, shine) must leave Moon body text at 7:1 or more. Strengthen the graph only where there's no text.
+- **Status marks** on a night's headline: Dew ✓ for steady, Lamp ↗ for unusual, Flare 👁 for "worth a closer look" (a repeated pattern only). The verdict card itself changes colour with the night (Oct 2026): blue when ordinary, a subtle warm dusk when unusual, wine into plum with a slowly breathing Flare glow for a repeated pattern.
 
-Lamp is the only warm colour. **Red is for form errors only** (`error` `#FFB4AB`, Material 3's dark-theme error colour, 11.2:1 on Midnight). It's never used for sleep data or results, which stay calm, never alarming.
+Lamp is the only warm UI colour. **One red, Flare `#FF5A4F`**, used in two places only: the loudest snoring in charts (`loudness.veryLoud`), and form-error marks (`errorMark`: the field ring and icon). Error text uses a light tint of it (`error` `#FFA49B`, 7.5:1 on Deep, 10:1 on Midnight) to keep AAA contrast. Never red for headlines, status marks or written results: the words stay calm.
+
+**One exception for buttons (Oct 2026): `urgentAction` `#FF7F72`**, Flare lightened to a coral, for the single care action on a repeated pattern (**Book a call** on the verdict card). It is the top of the escalation ladder, so the button carries the urgency and the words stay calm. Midnight label at 7.7:1 (AAA), 5.3:1 against the wine card. Nowhere else.
 
 ### Type
 
@@ -273,6 +291,8 @@ The design system targets **WCAG 2.2 Level AAA**. Every new screen must keep to 
 | Inactive page dash (Moon at 45%) | 4.1 : 1 | 3 |
 | Info icon, sheet handle | 7.6 : 1 or more | 3 |
 | Error red on Midnight / on Deep | 11.2 : 1 / 8.4 : 1 | 7 |
+| Midnight label on Book a call (`urgentAction`) | 7.7 : 1 | 7 |
+| Book a call button against the wine card | 5.3 : 1 | 3 |
 
 ### Icons
 
@@ -289,7 +309,7 @@ There are two presets in `src/theme/motion.ts`. Every animation uses one of them
 | **slow**: elegant, smooth | 1200 ms | cubic-bezier(0.3, 0, 0.2, 1) | cubic-bezier(0.47, 0, 0.745, 0.715) | cubic-bezier(0.37, 0, 0.63, 1) |
 | **fast**: a little snappier | 500 ms | cubic-bezier(0.2, 0, 0, 1) | cubic-bezier(0.4, 0, 0.8, 0.4) | cubic-bezier(0.45, 0, 0.2, 1) |
 
-Also: `ambient` (9 s sine loop, for background breathing), `attention` (1.8 s lap of light around the record dial, then a 3 s rest; the one call-to-action loop) and `stagger` (350 ms offset between overlapping elements).
+Also: `ambient` (9 s sine loop, for background breathing), `attention` (1.8 s lap of light around the record dial, then a 3 s rest; the one call-to-action loop), `glint` (2.4 s: on load a tiny shine draws the verdict card's graph from left to right, then glides along the finished line again after each 7 s rest; with Reduce Motion the graph is simply there) and `stagger` (350 ms offset between overlapping elements).
 
 **Where each is used so far**
 

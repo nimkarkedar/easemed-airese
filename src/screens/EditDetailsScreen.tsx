@@ -1,87 +1,87 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
-import { Button, DetailPage, FormDivider, FormGroup, FormInput, PAGE_SIDE } from '../components';
-import { isValidEmail, isValidPhone, isValidYear, setProfile, useProfile, type Profile } from '../lib/profile';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { AboutYou, Button, DetailPage, FormDivider, FormGroup, FormInput, PAGE_SIDE, PhoneField, ExplainSheet, InfoButton, PHONE_WHY } from '../components';
+import { isValidEmail, isValidPhone, setProfile, useProfile, type Profile } from '../lib/profile';
 import { space } from '../theme';
 
-type Errors = Partial<Record<keyof Profile, string>>;
+type Errors = { firstName?: string; phone?: string; email?: string };
 
-const CHECKS: Partial<Record<keyof Profile, (v: string) => string | undefined>> = {
-  birthYear: (v) => (!v || isValidYear(v) ? undefined : v.length < 4 ? 'Use four digits, like 1985.' : 'That year doesn’t look right. Check it and try again.'),
-  email: (v) => (!v || isValidEmail(v) ? undefined : 'Check your email address.'),
-  phone: (v) => (!v || isValidPhone(v) ? undefined : 'Check your phone number, including the country code.'),
-};
+const check = (p: Profile): Errors => ({
+  firstName: p.firstName.trim() ? undefined : 'Add your first name.',
+  phone: !p.phone ? 'Add your phone number.' : isValidPhone(p.phone, p.phoneCountry) ? undefined : 'Check your phone number.',
+  email: !p.email.trim() || isValidEmail(p.email) ? undefined : 'Check your email address.',
+});
 
 /**
- * Your details (Profile → Edit details): name, year of birth, email, phone and where you live.
+ * Your details (Profile → Edit details): the same fields as onboarding (DetailsScreen).
  * Edits are a draft: Save checks them and keeps them; Back leaves without changing anything.
- * Each field is checked when you leave it, and all of them again on Save.
+ * Fields are checked when you leave them, and all again on Save.
  */
 export function EditDetailsScreen({ onBack }: { onBack: () => void }) {
   const saved = useProfile();
   const [draft, setDraft] = useState<Profile>(saved);
   const [errors, setErrors] = useState<Errors>({});
+  const [phoneWhy, setPhoneWhy] = useState(false);
 
-  const set = (k: keyof Profile, v: string) => {
-    setDraft((d) => ({ ...d, [k]: v }));
-    if (errors[k]) setErrors((e) => ({ ...e, [k]: undefined }));
+  const update = (next: Partial<Profile>) => {
+    setDraft((d) => ({ ...d, ...next }));
+    const touched = Object.keys(next).filter((k) => k in errors) as (keyof Errors)[];
+    if (touched.length) setErrors((e) => ({ ...e, ...Object.fromEntries(touched.map((k) => [k, undefined])) }));
   };
-  const check = (k: keyof Profile) => setErrors((e) => ({ ...e, [k]: CHECKS[k]?.(draft[k].trim()) }));
+  const recheck = (k: keyof Errors) => setErrors((e) => ({ ...e, [k]: check(draft)[k] }));
 
   const save = (leave: (then: () => void) => void) => {
-    const next: Errors = {};
-    for (const k of Object.keys(CHECKS) as (keyof Profile)[]) next[k] = CHECKS[k]?.(draft[k].trim());
+    const next = check(draft);
     setErrors(next);
     if (Object.values(next).some(Boolean)) return;
-    setProfile(Object.fromEntries(Object.entries(draft).map(([k, v]) => [k, v.trim()])) as Profile);
+    setProfile({ ...draft, firstName: draft.firstName.trim(), lastName: draft.lastName.trim(), email: draft.email.trim() });
     leave(onBack);
-  };
-
-  const field = (k: keyof Profile, props: Omit<TextInputProps, 'style' | 'value' | 'onChangeText' | 'keyboardType'> & { keyboardType?: KeyboardTypeOptions; clean?: (v: string) => string }) => {
-    const { clean, ...input } = props;
-    return <FormInput {...input} value={draft[k]} onChangeText={(v) => set(k, clean ? clean(v) : v)} onBlur={CHECKS[k] ? () => check(k) : undefined} returnKeyType="next" />;
   };
 
   return (
     <DetailPage backLabel="Profile" title="Your details" onBack={onBack} footer={(leave) => <Button label="Save" onPress={() => save(leave)} />}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.body}>
-          <FormGroup title="Name">
-            {field('firstName', { placeholder: 'First name', autoComplete: 'given-name', textContentType: 'givenName', autoCapitalize: 'words' })}
+          <FormGroup title="Name" error={errors.firstName}>
+            <FormInput
+              placeholder="First name"
+              value={draft.firstName}
+              onChangeText={(firstName) => update({ firstName })}
+              onBlur={() => recheck('firstName')}
+              autoComplete="given-name"
+              textContentType="givenName"
+              autoCapitalize="words"
+              returnKeyType="next"
+            />
             <FormDivider />
-            {field('lastName', { placeholder: 'Last name', autoComplete: 'family-name', textContentType: 'familyName', autoCapitalize: 'words' })}
+            <FormInput placeholder="Last name" value={draft.lastName} onChangeText={(lastName) => update({ lastName })} autoComplete="family-name" textContentType="familyName" autoCapitalize="words" returnKeyType="next" />
           </FormGroup>
 
-          <FormGroup title="Year of birth" error={errors.birthYear}>
-            {field('birthYear', { placeholder: 'YYYY', accessibilityLabel: 'Year of birth', keyboardType: 'number-pad', maxLength: 4, autoComplete: 'birthdate-year', clean: (v) => v.replace(/\D/g, '').slice(0, 4) })}
+          <FormGroup title="Phone" titleAction={<InfoButton size={24} onPress={() => setPhoneWhy(true)} label="Why we ask for your phone number" />} error={errors.phone}>
+            <PhoneField country={draft.phoneCountry} digits={draft.phone} onChange={(phoneCountry, phone) => update({ phoneCountry, phone })} onBlur={() => {
+                if (draft.phone) recheck('phone');
+              }} returnKeyType="next" />
           </FormGroup>
 
-          <FormGroup title="Email" error={errors.email}>
-            {field('email', {
-              placeholder: 'name@example.com',
-              accessibilityLabel: 'Email address',
-              keyboardType: 'email-address',
-              autoCapitalize: 'none',
-              autoCorrect: false,
-              autoComplete: 'email',
-              textContentType: 'emailAddress',
-            })}
+          <FormGroup title="Email (optional)" error={errors.email}>
+            <FormInput
+              placeholder="name@example.com"
+              accessibilityLabel="Email address, optional"
+              value={draft.email}
+              onChangeText={(email) => update({ email })}
+              onBlur={() => recheck('email')}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+              returnKeyType="done"
+            />
           </FormGroup>
 
-          <FormGroup title="Phone" error={errors.phone}>
-            {field('phone', { placeholder: '+44 7700 900123', accessibilityLabel: 'Phone number', keyboardType: 'phone-pad', autoComplete: 'tel', textContentType: 'telephoneNumber' })}
-          </FormGroup>
-
-          {/* PRODUCT TO CONFIRM: what phone and location are for, and when they're shared. Copy assumes
-              they stay on the phone unless the user asks the care team to call. */}
-          <FormGroup title="Where you live" footer="Kept on this phone. Shared with the sleep care team only if you ask them to call you.">
-            {field('city', { placeholder: 'City', autoComplete: 'postal-address-locality', textContentType: 'addressCity', autoCapitalize: 'words' })}
-            <FormDivider />
-            {field('region', { placeholder: 'State or region', autoComplete: 'postal-address-region', textContentType: 'addressState', autoCapitalize: 'words' })}
-            <FormDivider />
-            {field('country', { placeholder: 'Country', autoComplete: 'country', textContentType: 'countryName', autoCapitalize: 'words' })}
-          </FormGroup>
+          <AboutYou value={draft} onChange={update} />
         </View>
+        <ExplainSheet content={phoneWhy ? PHONE_WHY : null} onClose={() => setPhoneWhy(false)} />
       </KeyboardAvoidingView>
     </DetailPage>
   );

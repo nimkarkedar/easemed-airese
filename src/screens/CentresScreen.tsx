@@ -2,7 +2,7 @@ import React from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { AppText, DetailPage, Icon, Logo, PAGE_SIDE, type IconName } from '../components';
 import { CENTRES, SUPPORT, directionsUrl, type Centre } from '../lib/airStation';
-import { colors, radius, space } from '../theme';
+import { alpha, colors, radius, space } from '../theme';
 
 /**
  * Our centres (Profile → Our centres): where The Air Station's sleep care team sees people.
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   lines: { gap: space.sm, marginTop: space.lg },
   line: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
   actions: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },
-  action: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 44, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1, borderColor: 'rgba(157, 180, 255, 0.5)' },
+  action: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 44, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1, borderColor: alpha(colors.breath, 0.5) },
   callAll: { paddingVertical: space.lg },
   brand: { alignItems: 'center', paddingTop: space.xxl, paddingBottom: space.xl, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider },
 });

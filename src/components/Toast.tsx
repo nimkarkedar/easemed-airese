@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet } from 'react-native';
-import { colors, motion, radius, space, useInsets } from '../theme';
+import { alpha, colors, motion, radius, space, useInsets } from '../theme';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
 
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(238, 241, 247, 0.24)',
+    borderColor: alpha(colors.moon, 0.24),
     zIndex: 70,
   },
 });

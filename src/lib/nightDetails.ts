@@ -288,9 +288,9 @@ export function summary(d: NightDetails): { headline: string; body: string } {
     case 'first':
       return { headline: 'A first look at your night', body: snored };
     case 'unusual':
-      return { headline: 'More snoring than usual', body: `${snored} That’s more than your recent nights.` };
+      return { headline: 'More snoring than usual', body: `${snored} That’s more than your usual.` };
     case 'pattern':
-      return { headline: 'Worth a closer look', body: `${snored} Your breathing was interrupted often, as on most recent nights.` };
+      return { headline: 'Worth a closer look', body: `${snored} Your breathing paused often on ${d.patternNights?.seen ?? 5} of the last ${d.patternNights?.of ?? 7} nights.` };
     default:
       return { headline: 'A steadier night', body: `${snored} Your breathing was steadier than on your recent nights.` };
   }
@@ -302,11 +302,11 @@ export function meaning(d: NightDetails): { title: string; body: string } | null
     case 'steady':
       return { title: 'Nothing unusual stood out', body: 'Your snoring and breathing were close to your recent pattern. Keep recording so Airese can learn what’s typical for you.' };
     case 'unusual':
-      return { title: 'Something to keep an eye on', body: 'You snored more and your breathing was less steady last night. One night alone doesn’t show a pattern.' };
+      return { title: 'Something to keep an eye on', body: 'You snored more and your breathing was less steady last night. One night is hard to read on its own. We’ll see how the week looks.' };
     case 'pattern':
       return {
-        title: 'This has been happening regularly',
-        body: `Your breathing was interrupted often on ${d.patternNights?.seen} of your last ${d.patternNights?.of} recorded nights. This is worth discussing with a doctor.`,
+        title: `${d.patternNights?.seen} of ${d.patternNights?.of} nights`,
+        body: `Your breathing paused often on ${d.patternNights?.seen} of the last ${d.patternNights?.of} nights. This is worth getting checked by a doctor.`,
       };
     default:
       return null;
@@ -318,8 +318,8 @@ export const EXPLAIN = {
   clips: { title: 'Why these clips?', body: 'Airese picks the moments that best explain your night, not just the loudest ones: a loud stretch, a repeated one, and any time your breathing was interrupted.' },
   breathing: { title: 'Breathing pauses', body: 'Moments when your breathing sounded like it paused or became uneven, counted per hour of sleep. Airese counts them; it doesn’t diagnose anything.' },
   usual: { title: 'What “usual” means', body: 'Airese compares this night with your own recent nights, not with other people. “About usual” means within a fifth of your recent average.' },
-  deciding: { title: 'How Airese decides what to say', body: 'One night alone doesn’t show a pattern. Airese only suggests talking to someone when the same thing shows up again and again.' },
-  privacy: { title: 'Private by design', body: 'Airese analyses your sleep sounds on your phone. Your recordings stay on your device, and you choose if and when to share anything.' },
+  deciding: { title: 'How Airese decides what to say', body: 'One night is hard to read on its own. Airese only suggests talking to a doctor when the same thing shows up night after night.' },
+  privacy: { title: 'Private by default', body: 'Your recordings stay on your phone. You choose if and when to share anything.' },
   restScore: { title: 'Rest Score', body: 'A summary of how settled your night sounded: how long you slept, and how often snoring or waking broke it up.' },
   soundScore: { title: 'Sound Score', body: 'Out of 100: half from how loud your snoring was, half from how much of the night it filled. Lower is quieter. It describes the sound, not your health.' },
   snoring: { title: 'Snoring', body: 'The total time Airese heard snoring, and how much of the recording that was.' },
@@ -343,7 +343,7 @@ export function loudnessLine(d: NightDetails) {
 }
 
 /**
- * Prototype: what each sample night shows, for the Recordings list and the night page.
+ * Prototype: what each sample night shows, for the Reports calendar and the report on show.
  * The oldest night is the first one; the rest are mostly ordinary, with the odd unusual night
  * and a repeated pattern in the most recent week.
  */
@@ -351,7 +351,7 @@ export function sampleState(night: Night, all: Night[]): NightState {
   const i = all.findIndex((n) => n.id === night.id);
   if (i === all.length - 1) return 'first';
   if (i === 1 || i === 3) return 'pattern';
-  if (i === 6) return 'unusual';
+  if (i === 4 || i === 6) return 'unusual'; // 4: one in the current month, so the calendar shows every kind
   return 'steady';
 }
 
@@ -367,13 +367,13 @@ export function nightState(night: Night, override?: string): NightState {
  * A small status mark for a night's headline (list rows, summary card): a calm, colour-coded icon.
  * Never red, never alarming: Dew for steady, Lamp (the warm light) for "look at this".
  */
-export type StatusMark = { icon: 'check_circle' | 'trending_up' | 'visibility' | 'bedtime'; color: 'dataSleep' | 'lamp' | 'textMuted' };
+export type StatusMark = { icon: 'check_circle' | 'trending_up' | 'visibility' | 'bedtime'; color: 'dataSleep' | 'lamp' | 'flare' | 'textMuted' };
 export function statusMark(state: NightState): StatusMark {
   switch (state) {
     case 'unusual':
       return { icon: 'trending_up', color: 'lamp' };
     case 'pattern':
-      return { icon: 'visibility', color: 'lamp' };
+      return { icon: 'visibility', color: 'flare' }; // Flare: the one urgent mark, only for a repeated pattern
     case 'steady':
       return { icon: 'check_circle', color: 'dataSleep' };
     default:

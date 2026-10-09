@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Animated, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { AmbientGradient, AppText, BottomSheet, Button, Icon, InfoButton, ListeningRing, PAGE_SIDE } from '../components';
-import { MAX_RECORDING_MINUTES, formatClock, formatDuration, fromMinutes, minutesSince } from '../lib/time';
-import { colors, gradients, motion, radius, space, type, useInsets, useReducedMotion } from '../theme';
+import { AmbientGradient, AppText, BottomSheet, Button, ExplainSheet, Icon, InfoButton, ListeningRing, PAGE_SIDE, TipCarousel, type CarouselTip } from '../components';
+import { MAX_RECORDING_MINUTES, formatClock, fromMinutes, minutesSince } from '../lib/time';
+import { alpha, colors, gradients, motion, radius, space, useInsets, useReducedMotion } from '../theme';
 import type { RecordOrigin } from './HomeScreen';
 
 const native = motion.useNativeDriver;
 const RING_MAX = 300;
+const RING_LABEL = 40; // room under the ring for "Tap to stop recording"
 const GRADIENT_STRETCH = 1.4;
 
 /**
@@ -18,11 +19,30 @@ const GRADIENT_STRETCH = 1.4;
  * the words rise into place and the listening ring opens out (slow ease-out, staggered).
  * Reduce Motion: no growing circle; the screen fades in.
  *
+ * Type: the title, then one style for everything else (Inter 16 regular). Importance comes from
+ * colour alone: Moon for what matters (the tips, the safety stop), Mist for the subtitle.
+ *
+ * Under the title, three tips in a carousel: lock the phone and leave Airese be, keep it charging,
+ * and Night Notes (with a way to add them if there are none yet).
+ *
  * Runs until you stop it when you wake: tap the button, then confirm, so a half-asleep tap never
- * ends the night. Stops by itself after 12 hours (MAX_RECORDING_MINUTES) if you forget.
+ * ends the night. Stops by itself after 8 hours (MAX_RECORDING_MINUTES) if you forget.
  * Direction: Figma "iPhone 16 & 17 Pro - 15" (Oct 2026).
  */
-export function RecordingScreen({ startedAt, from, onStop }: { startedAt: Date; from?: RecordOrigin; onStop: () => void }) {
+export function RecordingScreen({
+  startedAt,
+  from,
+  onStop,
+  notesTonight = '',
+  onOpenNotes,
+}: {
+  startedAt: Date;
+  from?: RecordOrigin;
+  onStop: () => void;
+  /** Tonight's Night Notes, summarised; empty when none yet. */
+  notesTonight?: string;
+  onOpenNotes?: () => void;
+}) {
   const insets = useInsets();
   const reduced = useReducedMotion();
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -35,7 +55,7 @@ export function RecordingScreen({ startedAt, from, onStop }: { startedAt: Date; 
   const surface = useRef(new Animated.Value(0)).current; // this screen fading in over the blue
   const ring = useRef(new Animated.Value(0)).current; // the listening ring opening out
 
-  // "Recording for …" stays true through the night; the safety cap ends it after 12 hours.
+  // "Recording for …" stays true through the night; the safety cap ends it after 8 hours.
   const elapsed = minutesSince(startedAt);
   const capAt = fromMinutes(startedAt.getHours() * 60 + startedAt.getMinutes() + MAX_RECORDING_MINUTES);
   useEffect(() => {
@@ -74,34 +94,10 @@ export function RecordingScreen({ startedAt, from, onStop }: { startedAt: Date; 
     ]).start();
   }, [size.width > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Info card: fade (fast ease-in), then close the gap (fast ease-in-out). Height can't use the native driver.
-  const [cardShown, setCardShown] = useState(true);
-  const card = useRef(new Animated.Value(1)).current;
-  const cardFull = useRef(0);
-  const [cardHeight, setCardHeight] = useState<Animated.Value | null>(null);
-  const closeCard = () => {
-    const h = new Animated.Value(cardFull.current);
-    setCardHeight(h);
-    Animated.sequence([
-      Animated.timing(card, {
-        toValue: 0,
-        duration: motion.fast.duration,
-        easing: motion.fast.easeIn,
-        useNativeDriver: false,
-      }),
-      Animated.timing(h, {
-        toValue: 0,
-        duration: reduced ? 0 : motion.fast.duration,
-        easing: motion.fast.easeInOut,
-        useNativeDriver: false,
-      }),
-    ]).start(() => setCardShown(false));
-  };
-
   // The blue circle: big enough to cover the screen from wherever the button was.
   const origin = from ?? { x: size.width / 2, y: size.height / 2, r: 60 };
   const cover = 2 * Math.hypot(Math.max(origin.x, size.width - origin.x), Math.max(origin.y, size.height - origin.y));
-  const ringSize = Math.floor(Math.min(RING_MAX, ringRoom.width, ringRoom.height));
+  const ringSize = Math.floor(Math.min(RING_MAX, ringRoom.width, ringRoom.height - RING_LABEL));
   const rise = (by: number) => ({
     opacity: surface,
     transform: [
@@ -152,42 +148,21 @@ export function RecordingScreen({ startedAt, from, onStop }: { startedAt: Date; 
       <View style={{ flex: 1, paddingTop: insets.top + space.xl }}>
         <Animated.View style={[{ paddingHorizontal: PAGE_SIDE }, rise(12)]}>
           <AppText variant="title" color="white" accessibilityRole="header">
-            Recording Sleep
+            Recording…
           </AppText>
           {/* Smart listening, with (i) for how recording works */}
           <View style={styles.subtitle}>
-            <AppText color="text" style={{ flex: 1 }}>
-              Private and smart listening.
+            <AppText color="textMuted" style={{ flex: 1 }}>
+              Listening privately, on this phone.
             </AppText>
             <InfoButton color="textMuted" label="How recording works" onPress={() => setInfo(true)} />
           </View>
         </Animated.View>
 
-        {/* Info card: close it and it fades, then the space closes up so the ring can grow */}
-        {cardShown && (
-          <Animated.View style={{ height: cardHeight ?? undefined }}>
-            <Animated.View style={rise(12)}>
-              <Animated.View
-                style={{
-                  paddingHorizontal: PAGE_SIDE,
-                  paddingTop: space.xl,
-                  opacity: card,
-                }}
-                onLayout={(e: LayoutChangeEvent) => cardFull.current === 0 && (cardFull.current = e.nativeEvent.layout.height)}
-              >
-                <View style={styles.card}>
-                  <AppText color="onAccent" style={{ flex: 1 }}>
-                    Keep Airese open while you sleep. You can lock your phone now.
-                  </AppText>
-                </View>
-                {/* Floating close button on the corner; 44 pt tap area */}
-                <Pressable onPress={closeCard} hitSlop={8} style={styles.close} accessibilityRole="button" accessibilityLabel="Close">
-                  <Icon name="close" size={18} color="text" />
-                </Pressable>
-              </Animated.View>
-            </Animated.View>
-          </Animated.View>
-        )}
+        {/* Tonight's tips: swipe or tap the dashes */}
+        <Animated.View style={[{ paddingHorizontal: PAGE_SIDE, paddingTop: space.xl }, rise(12)]}>
+          <TipCarousel tips={tonightTips(notesTonight, onOpenNotes)} />
+        </Animated.View>
 
         <View style={styles.ringArea} onLayout={(e: LayoutChangeEvent) => setRingRoom(e.nativeEvent.layout)}>
           {ringSize > 0 && (
@@ -205,12 +180,15 @@ export function RecordingScreen({ startedAt, from, onStop }: { startedAt: Date; 
               }}
             >
               <ListeningRing size={ringSize} onStop={() => setConfirm(true)} />
+              {/* Says what the button does; same style as "Tap to start recording" on Home: body, Moon */}
+              <AppText color="text" style={[styles.center, { marginTop: space.sm }]} importantForAccessibility="no" accessibilityElementsHidden>
+                Tap to stop recording
+              </AppText>
             </Animated.View>
           )}
         </View>
 
         <Animated.View style={[styles.note, rise(8), { marginBottom: Math.max(insets.bottom, space.lg) + space.xl }]}>
-          <Elapsed startedAt={startedAt} />
           {/* The safety net, said plainly: a chip, not a footnote */}
           <View style={styles.cap} accessible accessibilityLabel={`Stops by itself after ${MAX_RECORDING_MINUTES / 60} hours, at ${formatClock(capAt)}`}>
             <Icon name="schedule" size={20} color="text" />
@@ -218,9 +196,6 @@ export function RecordingScreen({ startedAt, from, onStop }: { startedAt: Date; 
               {`Stops by itself after ${MAX_RECORDING_MINUTES / 60} hours`}
             </AppText>
           </View>
-          <AppText color="textMuted" style={[styles.center, { marginTop: space.lg }]}>
-            Tap to stop when you wake up
-          </AppText>
         </Animated.View>
       </View>
 
@@ -242,77 +217,29 @@ export function RecordingScreen({ startedAt, from, onStop }: { startedAt: Date; 
         <Button label="Keep recording" variant="quiet" onPress={() => setConfirm(false)} style={{ marginTop: space.sm }} />
       </BottomSheet>
 
-      {/* (i): content to come */}
-      <BottomSheet visible={info} onClose={() => setInfo(false)}>
-        <View />
-      </BottomSheet>
+      {/* (i): how recording works, plain and factual (docs/BRAND.md) */}
+      <ExplainSheet
+        content={info ? { title: 'How recording works', body: 'Airese listens through your phone’s microphone, even with the screen locked. It keeps short moments of snoring and breathing, and works out your night on this phone. Nothing leaves it unless you choose to share.' } : null}
+        onClose={() => setInfo(false)}
+      />
     </View>
   );
 }
 
-/**
- * "Recording for 02:14": hours and minutes since the start, the colon blinking once a second
- * (fast preset, in and out) like a running clock. Reduce Motion: a steady colon.
- * Screen readers hear "Recording for 2 hr 14 min", updated each minute, never the blink.
- */
-function Elapsed({ startedAt }: { startedAt: Date }) {
-  const reduced = useReducedMotion();
-  const [, tick] = useState(0);
-  const blink = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    const id = setInterval(() => tick((n) => n + 1), 5_000); // catches each new minute within a few seconds
-    return () => clearInterval(id);
-  }, []);
-  useEffect(() => {
-    if (reduced) return blink.setValue(1);
-    const half = { duration: motion.fast.duration, easing: motion.fast.easeInOut, useNativeDriver: native };
-    const loop = Animated.loop(Animated.sequence([Animated.timing(blink, { toValue: 0.15, ...half }), Animated.timing(blink, { toValue: 1, ...half })]));
-    loop.start();
-    return () => loop.stop();
-  }, [blink, reduced]);
-
-  const m = minutesSince(startedAt);
-  const two = (n: number) => String(n).padStart(2, '0');
-  return (
-    <View style={styles.clock} accessible accessibilityLabel={`Recording for ${formatDuration(m)}`}>
-      <AppText variant="heading" color="text">
-        Recording for{' '}
-      </AppText>
-      <AppText variant="heading" color="text" style={styles.digits}>
-        {two(Math.floor(m / 60))}
-      </AppText>
-      <Animated.Text style={[type.heading, { color: colors.text, opacity: blink }]}>:</Animated.Text>
-      <AppText variant="heading" color="text" style={styles.digits}>
-        {two(m % 60)}
-      </AppText>
-    </View>
-  );
+/** What to know once recording has started. Copy: plain and calm (docs/BRAND.md). */
+function tonightTips(notesTonight: string, onOpenNotes?: () => void): CarouselTip[] {
+  return [
+    { id: 'lock', icon: 'lock', text: 'Keep Airese open. Just lock your phone.' },
+    { id: 'charge', icon: 'battery_charging_full', text: 'Keep your phone on charge.' },
+    notesTonight
+      ? { id: 'notes', icon: 'edit_note', text: 'Night Notes added for tonight.' }
+      : { id: 'notes', icon: 'edit_note', text: 'No Night Notes yet tonight.', action: onOpenNotes ? { label: 'Add', onPress: onOpenNotes } : undefined },
+  ];
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, overflow: 'hidden' },
   subtitle: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.xs },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.lg,
-    padding: space.xl,
-    borderRadius: radius.xl,
-    backgroundColor: colors.accent,
-  },
-  close: {
-    position: 'absolute',
-    top: space.xl - 10,
-    right: PAGE_SIDE - 10,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(238, 241, 247, 0.35)',
-  },
   ringArea: {
     flex: 1,
     alignItems: 'center',
@@ -325,20 +252,17 @@ const styles = StyleSheet.create({
     marginTop: space.lg,
     alignItems: 'center',
   },
-  clock: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
-  digits: { fontVariant: ['tabular-nums'] },
   cap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
     minHeight: 44,
-    marginTop: space.md,
     paddingHorizontal: space.lg,
     paddingVertical: space.sm,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(238, 241, 247, 0.12)',
+    backgroundColor: alpha(colors.moon, 0.12),
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(238, 241, 247, 0.35)',
+    borderColor: alpha(colors.moon, 0.35),
   },
   center: { textAlign: 'center' },
 });

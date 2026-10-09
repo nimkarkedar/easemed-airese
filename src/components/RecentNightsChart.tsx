@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import { colors, space } from '../theme';
+import { alpha, colors, space } from '../theme';
 import { AppText } from './AppText';
 
 const HEIGHT = 112; // plot height
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   // Wider than its bar, so the value stays on one line; right-aligned so it never runs off the card.
   value: { position: 'absolute', right: 0, width: 140, textAlign: 'right' },
   bar: { width: '100%', borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: colors.dataSnoring },
-  earlier: { backgroundColor: 'rgba(238, 241, 247, 0.16)' }, // earlier nights neutral, so tonight's Ember stands out
+  earlier: { backgroundColor: alpha(colors.moon, 0.16) }, // earlier nights neutral, so tonight's Ember stands out
   usual: { position: 'absolute', left: 0, right: 0, height: 0 },
   dash: { flex: 1, borderTopWidth: 1.5, borderStyle: 'dashed', borderColor: colors.mist },
   baseline: { height: StyleSheet.hairlineWidth, backgroundColor: colors.divider },

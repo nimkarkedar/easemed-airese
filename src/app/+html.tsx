@@ -1,7 +1,7 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
-// Web only: loads Montserrat from Google Fonts (native apps bundle the font files).
+// Web only: loads Montserrat (titles, buttons) and Inter (body) from Google Fonts (native apps bundle the font files).
 export default function Root({ children }: PropsWithChildren) {
   return (
     <html lang="en">
@@ -11,7 +11,7 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Montserrat:wght@400;600&display=swap"
         />
         <ScrollViewStyleReset />
       </head>

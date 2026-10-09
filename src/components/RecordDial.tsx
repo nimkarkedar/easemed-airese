@@ -173,19 +173,35 @@ export function RecordDial({ size, note, ready = true, onStart }: { size: number
         </Animated.View>
       </View>
 
-      <AppText variant="small" color="textMuted" accessibilityLiveRegion="polite" style={{ marginTop: space.md, textAlign: 'center' }}>
+      {/* Same style as "Tap to stop recording" on the Recording screen: body, Moon */}
+      <AppText color="text" accessibilityLiveRegion="polite" style={{ marginTop: space.md, textAlign: 'center' }}>
         {state === 'started' ? 'Recording started' : 'Tap to start recording'}
       </AppText>
       {note ? (
-        <AppText variant="small" color="textMuted" style={{ textAlign: 'center' }}>
-          {note}
-        </AppText>
+        // The privacy promise, with a lock so it reads as a fact rather than small print
+        <View style={styles.note}>
+          <Icon name="lock" size={16} color="accent" />
+          <AppText variant="small" color="textMuted">
+            {note}
+          </AppText>
+        </View>
       ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  note: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    marginTop: space.sm,
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.divider,
+  },
   tick: { position: 'absolute', width: TICK_W, height: TICK_H, borderRadius: TICK_W / 2, backgroundColor: colors.accent },
   glint: { backgroundColor: colors.text, shadowColor: colors.accent, shadowOpacity: 0.9, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } },
   center: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },

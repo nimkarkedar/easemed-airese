@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AppState, Platform, StyleSheet, View } from 'react-native';
 import { openAppSettings } from '../lib/permissions';
 import { askPermission, refreshPermissions, usePermissionStatus, type PermissionKind } from '../lib/permissionStatus';
-import { space } from '../theme';
+import { colors, alpha, space } from '../theme';
 import { AppText } from './AppText';
 import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
@@ -26,11 +26,11 @@ const COPY: Record<PermissionKind, { icon: IconName; cta: string; why: { title: 
     cta: 'Allow notifications',
     why: {
       title: 'Get a nudge at bedtime',
-      body: 'Just two a day: a reminder to start recording, and a note when it stops. Nothing else.',
+      body: 'A reminder at bedtime, and a note when your night is ready. Choose which in Profile.',
     },
     blocked: {
       title: 'Notifications are off',
-      body: 'You won’t get the bedtime reminder or the note when recording stops. To turn them on, open Settings and allow Notifications for Airese.',
+      body: 'You won’t get the bedtime reminder or the note when your night is ready. To turn them on, open Settings and allow Notifications for Airese.',
     },
   },
 };
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(157, 180, 255, 0.14)', // Breath, soft
+    backgroundColor: alpha(colors.breath, 0.14), // Breath, soft
   },
   center: { textAlign: 'center' },
 });

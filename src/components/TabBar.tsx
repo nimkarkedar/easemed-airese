@@ -1,6 +1,6 @@
 import React from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import { colors, radius, space, useInsets } from '../theme';
+import { alpha, colors, radius, space, useInsets } from '../theme';
 import { AppText } from './AppText';
 import { Icon, type IconName } from './Icon';
 
@@ -9,7 +9,7 @@ export type TabItem = { key: string; label: string; icon: IconName; iconSelected
 /** The two home tabs (web bar and browser preview; native tabs are declared in src/app/(tabs)/_layout.tsx). */
 export const HOME_TABS: TabItem[] = [
   { key: 'home', label: 'Home', icon: 'home', iconSelected: 'home_fill' },
-  { key: 'recordings', label: 'Recordings', icon: 'graphic_eq' },
+  { key: 'reports', label: 'Reports', icon: 'description' },
 ];
 
 /** Space to leave at the bottom of a tab screen so content isn't hidden under the floating bar. */
@@ -59,10 +59,10 @@ const styles = StyleSheet.create({
     padding: space.xs,
     gap: space.xs,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(25, 41, 78, 0.55)', // Deep, translucent
+    backgroundColor: alpha(colors.deep, 0.55), // Deep, translucent
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(238, 241, 247, 0.22)', // Moon edge highlight
-    shadowColor: '#000',
+    borderColor: alpha(colors.moon, 0.22), // Moon edge highlight
+    shadowColor: colors.night,
     shadowOpacity: 0.35,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 8 },

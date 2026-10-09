@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     left: PAD,
     borderRadius: 8,
     backgroundColor: colors.accent, // Breath, like the primary button
-    shadowColor: '#000',
+    shadowColor: colors.night,
     shadowOpacity: 0.12,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },

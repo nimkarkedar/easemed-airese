@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, BackHandler, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { colors, motion, radius, space, useInsets, useReducedMotion } from '../theme';
+import { alpha, colors, motion, radius, space, useInsets, useReducedMotion } from '../theme';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
 
@@ -120,11 +120,11 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(238, 241, 247, 0.12)',
+    borderColor: alpha(colors.moon, 0.12),
     overflow: 'hidden',
   },
   header: { minHeight: HEADER, paddingTop: space.sm, paddingHorizontal: space.gutter },
   grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: colors.textMuted, marginBottom: space.md },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingBottom: space.md },
-  close: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(238, 241, 247, 0.1)' },
+  close: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: alpha(colors.moon, 0.1) },
 });

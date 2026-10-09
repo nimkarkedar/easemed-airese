@@ -86,7 +86,7 @@ export function MicrophonePermissionScreen({ onDone }: { onDone?: () => void }) 
       kind="microphone"
       art={require('../../assets/permissions/microphone.png')}
       title="Let Airese listen while you sleep."
-      body="Allow microphone access to capture snoring and breathing. Recordings stay private on your device unless you choose to share them."
+      body="Airese listens all night for snoring and breathing. Your recordings stay on your phone. Private and safe."
       cta="Allow microphone"
       onDone={onDone}
     />
@@ -99,7 +99,7 @@ export function NotificationsPermissionScreen({ onDone }: { onDone?: () => void 
       kind="notifications"
       art={require('../../assets/permissions/notifications.png')}
       title="Turn on notifications."
-      body="We’ll remind you to start recording, and let you know when it stops. Just two notifications a day."
+      body="A reminder at bedtime, and a note when your night is ready. Choose which in Profile."
       cta="Allow notifications"
       onDone={onDone}
     />

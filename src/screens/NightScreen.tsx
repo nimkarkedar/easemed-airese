@@ -5,7 +5,7 @@ import {
   AudioSnippet,
   BenchmarkScale,
   BigNumber,
-  CareCTA,
+  Button,
   ClipPlayer,
   ComparisonIndicator,
   DataCard,
@@ -16,6 +16,7 @@ import {
   InsightCard,
   LargeSheet,
   LoudnessBars,
+  VerdictCard,
   NightTimeline,
   PAGE_SIDE,
   PrivacyFooter,
@@ -39,7 +40,6 @@ import {
   meaning,
   nightDetails,
   shortDuration,
-  statusMark,
   summary,
   trend,
   trendWords,
@@ -50,7 +50,7 @@ import {
 } from '../lib/nightDetails';
 import { formatNightDate, formatRecorded, formatSpan, type Night } from '../lib/recordings';
 import { formatDuration } from '../lib/time';
-import { colors, motion, radius, space, type } from '../theme';
+import { alpha, colors, motion, radius, space, type } from '../theme';
 
 /** What a card opens: a large sheet. */
 type Sheet = 'report' | 'sound' | 'snoring' | 'breathing' | 'sleep' | 'clips' | 'recent';
@@ -81,11 +81,35 @@ const PROCESSING_DEMO_MS = 6000; // prototype: how long "Looking through your ni
  * Colour by data: Ember snoring, Iris breathing, Dew sleep. Type: four sizes, regular and semibold.
  * States: processing, poor audio, first night (no comparisons), ordinary, unusual, repeated pattern.
  */
-export function NightScreen({ night, state: initialState, onBack, slideIn = Platform.OS === 'web' }: { night: Night; state: NightState; onBack: () => void; slideIn?: boolean }) {
+export function NightScreen({
+  night,
+  state: initialState,
+  onBack,
+  slideIn = Platform.OS === 'web',
+  trailing,
+  bottomInset,
+  onRecordAgain,
+  tag,
+}: {
+  night: Night;
+  state: NightState;
+  /** Opened over something (a back button). Leave out when it's the Reports tab's own page. */
+  onBack?: () => void;
+  slideIn?: boolean;
+  /** A tag beside the subtitle, e.g. "Last night" (Reports, on the most recent night). */
+  tag?: string;
+  /** Top-right control (Reports: the calendar); see DetailPage. */
+  trailing?: React.ComponentProps<typeof DetailPage>['trailing'];
+  /** Room for the tab bar when it's a tab's page. */
+  bottomInset?: number;
+  /** "Record again tonight": where that goes (Reports: to Home). Defaults to going back. */
+  onRecordAgain?: () => void;
+}) {
   const [state, setState] = useState(initialState);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [lastSheet, setLastSheet] = useState<Sheet>('report');
-  const [explain, setExplain] = useState<ExplainKey | 'care' | null>(null);
+  const [explain, setExplain] = useState<ExplainKey | 'care' | 'remedy' | null>(null);
+  const [heroBottom, setHeroBottom] = useState(0); // where the verdict card ends: the footer waits until it's scrolled past
   const player = useClipPlayer();
   const d = nightDetails(night, state === 'processing' ? 'steady' : state);
   // The moment in the player: a breathing pause if there was one (the clearest proof), else the first.
@@ -111,12 +135,20 @@ export function NightScreen({ night, state: initialState, onBack, slideIn = Plat
   const lead = d.featured.find((c) => c.id === selected) ?? d.featured[0];
   const sound = mark(marks, 'sound');
   const breathing = mark(marks, 'breathing');
-  const status = statusMark(state);
   const moment = lead ? d.featured.indexOf(lead) : -1;
   const pick = (c: Clip) => {
     setSelected(c.id);
     if (player.playing !== c.id) player.toggle(c);
   };
+
+  // The night's one next step, in the verdict card and (once that's scrolled away) the sticky footer.
+  // Ordinary or first night: keep tracking. Unusual: something to try tonight. Repeated pattern: book a call.
+  const step = (leave: (then: () => void) => void) =>
+    concern
+      ? { label: 'Book a call', footerLabel: 'Book a call with a sleep care team', icon: 'call' as const, onPress: () => setExplain('care') }
+      : state === 'unusual'
+        ? { label: 'Try using a remedy', footerLabel: 'Try a remedy tonight', icon: 'airwave' as const, onPress: () => setExplain('remedy') }
+        : { label: 'Keep tracking', footerLabel: 'Record again tonight', icon: 'mic' as const, onPress: () => (onRecordAgain ? onRecordAgain() : onBack && leave(onBack)) };
 
   // Snoring is a score; breathing a plain level (its exact rate is in its sheet and the report).
   const scores = (
@@ -181,19 +213,31 @@ export function NightScreen({ night, state: initialState, onBack, slideIn = Plat
   return (
     <>
       <DetailPage
-        backLabel="Recordings"
+        backLabel={onBack ? 'Back' : undefined}
         title={formatNightDate(night.date)}
-        subtitle={`${formatRecorded(night.minutes)} · ${formatSpan(night)}`}
+        subtitle={`${formatRecorded(night.minutes)}\n${formatSpan(night)}`} // two lines: how long, then when
+        subtitleTag={tag}
         onBack={onBack}
-        slideIn={slideIn}
-        footer={state === 'processing' ? undefined : (leave) => <CareCTA concern={concern} onPress={() => (concern ? setExplain('care') : leave(onBack))} />}
+        slideIn={onBack ? slideIn : false}
+        trailing={trailing}
+        bottomInset={bottomInset}
+        footer={
+          !ready
+            ? undefined
+            : (leave) => {
+                const s = step(leave);
+                return <Button label={s.footerLabel} onPress={s.onPress} />;
+              }
+        }
+        footerAfter={ready ? heroBottom : undefined} // hidden from the start; shows once the verdict card has scrolled away
       >
+        {(leave) => (
         <View style={styles.body}>
           {state === 'processing' && <Processing />}
 
           {state === 'poor' && (
             <>
-              <InsightCard lead tone="hero" title="We couldn’t hear enough clearly last night" body="Try placing your phone closer to your bed tonight." />
+              <InsightCard lead tone="hero" title="We couldn’t hear enough last night" body="Try your phone closer to the bed." />
               <View style={{ flex: 1 }} />
               <PrivacyFooter onMore={() => setExplain('privacy')} />
             </>
@@ -201,20 +245,20 @@ export function NightScreen({ night, state: initialState, onBack, slideIn = Plat
 
           {ready && (
             <>
-              {/* The verdict, with a colour-coded status mark, and the way into the audio */}
-              <InsightCard lead tone="hero" icon={status.icon} iconColor={status.color} title={sum.headline} body={sum.body}>
-                {lead && (
-                  <Pressable
-                    onPress={() => player.toggle(lead)}
-                    accessibilityRole="button"
-                    accessibilityLabel={player.playing === lead.id ? 'Pause' : `Have a listen: ${clockAt(d, lead.at)}`}
-                    style={({ pressed }) => [styles.listen, pressed && { opacity: 0.85 }]}
-                  >
-                    <Icon name={player.playing === lead.id ? 'pause_fill' : 'play_fill'} size={18} color="onAccent" />
-                    <AppText color="onAccent">{player.playing === lead.id ? 'Pause' : 'Have a listen'}</AppText>
-                  </Pressable>
-                )}
-              </InsightCard>
+              {/* The verdict: the words, the night's one next step, and the week as a graph behind them */}
+              <View onLayout={(e) => setHeroBottom(e.nativeEvent.layout.y + e.nativeEvent.layout.height)}>
+                <VerdictCard
+                  mood={concern ? 'urgent' : state === 'unusual' ? 'watch' : 'calm'}
+                  title={sum.headline}
+                  body={sum.body}
+                  // The week behind the words: last 7 nights of snoring (tonight last), or tonight hour by hour on a first night
+                  values={d.recent.length ? d.recent.map((r) => r.snoringMinutes) : d.hourly.map((h) => h.minutes)}
+                  action={(() => {
+                    const s = step(leave);
+                    return { label: s.label, icon: concern ? s.icon : undefined, onPress: s.onPress };
+                  })()}
+                />
+              </View>
 
               {usual && scores}
               {sound_}
@@ -263,6 +307,7 @@ export function NightScreen({ night, state: initialState, onBack, slideIn = Plat
             </>
           )}
         </View>
+        )}
       </DetailPage>
 
       {/* Large sheets: the full story behind each card */}
@@ -272,7 +317,7 @@ export function NightScreen({ night, state: initialState, onBack, slideIn = Plat
 
       {/* Small sheets: one-line explanations */}
       <ExplainSheet
-        content={explain === 'care' ? CARE : explain ? EXPLAIN[explain] : null}
+        content={explain === 'care' ? CARE : explain === 'remedy' ? REMEDY : explain ? EXPLAIN[explain] : null}
         onClose={() => setExplain(null)}
         // Callback flow (contact details, consent): design to come
         action={explain === 'care' ? { label: 'Request a callback', onPress: () => setExplain(null) } : undefined}
@@ -285,6 +330,12 @@ export function NightScreen({ night, state: initialState, onBack, slideIn = Plat
 const CARE = {
   title: 'Talk to a sleep care team',
   body: 'A sleep care team from The Air Station can go through your recent nights with you and suggest what to do next. It isn’t a diagnosis.',
+};
+
+// Over-the-counter things some people find help; not medical advice, and no product names.
+const REMEDY = {
+  title: 'Something to try tonight',
+  body: 'Nasal strips, sleeping on your side, or a humidifier help some people snore less. You can get them without a prescription. Try one tonight and add it to Night Notes, so Airese can show you if it made a difference.',
 };
 
 const mark = (marks: Benchmark[], k: Benchmark['key']) => marks.find((b) => b.key === k)!;
@@ -337,7 +388,7 @@ const pct = (part: number, whole: number) => Math.round((part / whole) * 100);
 /** The chart's one line: how long it was louder than a conversation, and when. */
 function chartLine(d: NightDetails) {
   const loud = loudMinutes(d);
-  return loud ? `Louder than a conversation for ${shortDuration(loud)}. Mostly between ${busiestWindow(d)}.` : `Quieter than a conversation all night. Mostly between ${busiestWindow(d)}.`;
+  return loud ? `Louder than a conversation for ${formatDuration(loud)}, mostly between ${busiestWindow(d)}.` : `Quieter than a conversation all night.`;
 }
 
 /** Breathing pauses in each hour of the recording. */
@@ -617,13 +668,15 @@ const styles = StyleSheet.create({
   mini: { marginTop: 'auto', paddingTop: space.lg },
   semibold: { fontFamily: type.heading.fontFamily, fontWeight: type.heading.fontWeight },
 
-  moment: { marginTop: space.xl, paddingTop: space.xl, borderTopWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(238, 241, 247, 0.16)' },
+  moment: { marginTop: space.xl, paddingTop: space.xl, borderTopWidth: StyleSheet.hairlineWidth, borderColor: alpha(colors.moon, 0.16) },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.lg },
-  stepButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(238, 241, 247, 0.08)' },
+  stepButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: alpha(colors.moon, 0.08) },
   off: { opacity: 0.4 },
   stats: { flexDirection: 'row', gap: space.md },
 
-  listen: { alignSelf: 'flex-start', minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg, borderRadius: radius.pill, backgroundColor: colors.accent, marginTop: space.xl },
+  // The card's next step: full width, 48 pt. On the urgent (wine) card it's Moon, not Breath: blue on wine clashes.
+  listen: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, paddingHorizontal: space.lg, borderRadius: radius.pill, backgroundColor: colors.accent, marginTop: space.xl },
+  listenUrgent: { backgroundColor: colors.text },
 
   allClips: { minHeight: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.sm, marginLeft: 'auto' },
 
@@ -636,11 +689,11 @@ const styles = StyleSheet.create({
   word: { paddingHorizontal: space.md, minHeight: 28, justifyContent: 'center', borderRadius: radius.pill, borderWidth: 1.5 },
   part: { gap: space.sm, paddingVertical: space.sm },
   partHead: { flexDirection: 'row', justifyContent: 'space-between' },
-  partTrack: { height: 10, borderRadius: 5, backgroundColor: 'rgba(179, 189, 211, 0.1)', overflow: 'hidden' },
+  partTrack: { height: 10, borderRadius: 5, backgroundColor: alpha(colors.mist, 0.1), overflow: 'hidden' },
   refRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: space.sm },
   compareRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
 
   processing: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: space.xxl * 3 },
-  progress: { width: 200, height: 4, borderRadius: 2, marginTop: space.xl, overflow: 'hidden', backgroundColor: 'rgba(179, 189, 211, 0.15)' },
+  progress: { width: 200, height: 4, borderRadius: 2, marginTop: space.xl, overflow: 'hidden', backgroundColor: alpha(colors.mist, 0.15) },
   glint: { width: 80, height: 4, borderRadius: 2, backgroundColor: colors.accent },
 });

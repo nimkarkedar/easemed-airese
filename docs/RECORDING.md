@@ -8,7 +8,7 @@ How long a night's recording runs, and why. Decided Oct 2026, after mixed feedba
 
 - **Start:** tap the record button on Home. Recording starts now.
 - **Stop:** tap the stop button on the Recording screen, then confirm. You go straight to "Looking through your night", then Recording Details.
-- **Safety net:** recording stops by itself after **12 hours** (`MAX_RECORDING_MINUTES` in `src/lib/time.ts`) if nobody stops it. This protects battery and storage.
+- **Safety net:** recording stops by itself after **8 hours** (`MAX_RECORDING_MINUTES` in `src/lib/time.ts`) if nobody stops it. This protects battery and storage.
 
 ## Why not ask for a stop time at bedtime
 
@@ -29,6 +29,6 @@ Airese doesn't wake anyone. Building a reliable alarm is a product of its own, a
 
 ## For Engineering
 
-- **Morning reminder for anyone who forgets to stop.** If recording is still running at the user's usual wake time (learned from previous nights), send one notification: "Still recording. Stop now to see your night." If notifications are off, the 12-hour cap still ends the night.
-- **The 12-hour cap is a placeholder.** Confirm it against battery and storage measurements. It could later become a setting in Profile if users ask for one.
+- **Morning reminder for anyone who forgets to stop.** If recording is still running at the user's usual wake time (learned from previous nights), send one notification: "Still recording. Stop now to see your night." If notifications are off, the 8-hour cap still ends the night.
+- **The 8-hour cap is a placeholder.** Confirm it against battery and storage measurements. It could later become a setting in Profile if users ask for one.
 - **Recording must survive the screen being locked.** The Recording screen tells users to keep Airese open and lock their phone.

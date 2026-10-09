@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, BackHandler, Modal, PanResponder, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, BackHandler, Keyboard, Modal, PanResponder, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { colors, motion, radius, space, useInsets, useReducedMotion } from '../theme';
 
 const native = motion.useNativeDriver;
@@ -55,6 +55,20 @@ export function BottomSheet({
     }
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Sheets with a text field: sit above the keyboard while it's up.
+  const [keyboard, setKeyboard] = useState(0);
+  useEffect(() => {
+    if (!visible) return;
+    const ios = Platform.OS === 'ios';
+    const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', (e) => setKeyboard(e.endCoordinates.height));
+    const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboard(0));
+    return () => {
+      show.remove();
+      hide.remove();
+      setKeyboard(0);
+    };
+  }, [visible]);
+
   // Android back button closes the sheet.
   useEffect(() => {
     if (!visible) return;
@@ -92,7 +106,7 @@ export function BottomSheet({
           styles.sheet,
           fit && { minHeight: 0 },
           {
-            bottom: Math.max(space.xl, insets.bottom - space.sm),
+            bottom: keyboard ? keyboard + space.sm : Math.max(space.xl, insets.bottom - space.sm),
             opacity: reduced ? progress : 1,
             transform: [
               { translateY: reduced ? 0 : progress.interpolate({ inputRange: [0, 1], outputRange: [height, 0] }) },

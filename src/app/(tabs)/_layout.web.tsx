@@ -12,7 +12,7 @@ export default function TabsLayout() {
       )}
     >
       <Tabs.Screen name="home" />
-      <Tabs.Screen name="recordings" />
+      <Tabs.Screen name="reports" />
     </Tabs>
   );
 }

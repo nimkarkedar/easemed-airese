@@ -5,9 +5,9 @@ import { AppText, BottomSheet, Button, DetailPage, ExplainSheet, FormDivider, Fo
 import { SUPPORT } from '../lib/airStation';
 import { EXPLAIN } from '../lib/nightDetails';
 import { usePermissionStatus } from '../lib/permissionStatus';
-import { initials, useNotificationPrefs, useProfile } from '../lib/profile';
+import { initials, phoneDisplay, useNotificationPrefs, useProfile } from '../lib/profile';
 import { deleteAllRecordings, useNights } from '../lib/recordings';
-import { colors, space } from '../theme';
+import { alpha, colors, space } from '../theme';
 
 type Confirm = 'recordings' | 'erase';
 type About = 'how' | 'privacy' | 'terms';
@@ -36,7 +36,7 @@ const ABOUT: Record<About, { title: string; body: string }> = {
 };
 
 /**
- * Profile (account settings), opened from the avatar on Home and Recordings. One short page of
+ * Profile (account settings), opened from the avatar on Home. One short page of
  * rows; anything with a form or switches opens one level down. Order follows what people come for:
  *
  *   you          initials (no photo), name, email · Edit details ›
@@ -74,6 +74,7 @@ export function ProfileScreen({
   const [about, setAbout] = useState<About | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const name = `${profile.firstName} ${profile.lastName}`.trim();
+  const contact = profile.phone ? phoneDisplay(profile) : profile.email;
   const sentCount = Object.values(prefs).filter(Boolean).length;
   const version = Constants.expoConfig?.version ?? '';
 
@@ -94,7 +95,7 @@ export function ProfileScreen({
       <DetailPage backLabel={backLabel} title="Profile" onBack={onBack}>
         <View style={styles.body}>
           {/* You */}
-          <Pressable onPress={onOpenDetails} accessibilityRole="button" accessibilityLabel={`${name || 'Add your details'}${profile.email ? `, ${profile.email}` : ''}. Edit details`} style={({ pressed }) => [styles.you, pressed && { opacity: 0.8 }]}>
+          <Pressable onPress={onOpenDetails} accessibilityRole="button" accessibilityLabel={`${name || 'Add your details'}${contact ? `, ${contact}` : ''}. Edit details`} style={({ pressed }) => [styles.you, pressed && { opacity: 0.8 }]}>
             <View style={styles.avatar}>
               {initials(profile) ? (
                 <AppText variant="heading" color="text">
@@ -109,7 +110,7 @@ export function ProfileScreen({
                 {name || 'Add your details'}
               </AppText>
               <AppText variant="small" color={name ? 'textMuted' : 'accent'} numberOfLines={1}>
-                {name ? profile.email || 'Edit details' : 'Name, email and where you live'}
+                {name ? contact || 'Edit details' : 'Name, phone and a little about you'}
               </AppText>
             </View>
             <Icon name="chevron_right" size={22} color="textMuted" />
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(238, 241, 247, 0.24)',
+    borderColor: alpha(colors.moon, 0.24),
   },
   brand: { alignItems: 'center', paddingTop: space.xxl * 2, paddingBottom: space.xxl, marginTop: space.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider },
   center: { textAlign: 'center' },

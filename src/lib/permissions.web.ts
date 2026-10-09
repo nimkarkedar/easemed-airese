@@ -8,7 +8,7 @@ import { showSystemAlert } from '../components/SystemAlertHost';
 export function requestMicrophone(): Promise<boolean> {
   return showSystemAlert({
     title: '“Airese” Would Like to Access the Microphone',
-    message: 'Airese listens while you sleep to capture snoring and breathing. Recordings stay on your device unless you choose to share them.',
+    message: 'Airese listens all night for snoring and breathing. Your recordings stay on your phone unless you choose to share them.',
   });
 }
 

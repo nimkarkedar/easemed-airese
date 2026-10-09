@@ -32,6 +32,8 @@ export const motion = {
   ambient: { duration: 9000, easing: Easing.inOut(Easing.sin) },
   /** A light that runs once around the record dial to invite a press, then rests before the next lap. */
   attention: { duration: 1800, rest: 3000, easing: Easing.bezier(0.37, 0, 0.63, 1) },
+  /** A tiny shine gliding once along a graph's line (the verdict card), then a long rest. Quiet, occasional. */
+  glint: { duration: 2400, rest: 7000, easing: Easing.bezier(0.37, 0, 0.63, 1) },
   /** Offset before a follow-on element, so things arrive in sequence, not all at once. */
   stagger: 350,
   /** The native driver isn't available on web (browser preview only). */

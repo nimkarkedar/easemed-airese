@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { zoneOf, type Benchmark } from '../lib/benchmarks';
-import { colors, space } from '../theme';
+import { alpha, colors, space } from '../theme';
 import { AppText } from './AppText';
 
 const TRACK = 10;
@@ -27,7 +27,7 @@ export function BenchmarkScale({ b, color }: { b: Benchmark; color: string }) {
             {b.zones.map((z, i) => (
               <View
                 key={z.word}
-                style={[styles.zone, { left: x(edges[i]) + (i ? GAP / 2 : 0), width: x(edges[i + 1]) - x(edges[i]) - (i ? GAP : GAP / 2), backgroundColor: z === current ? color : 'rgba(238, 241, 247, 0.14)' }]}
+                style={[styles.zone, { left: x(edges[i]) + (i ? GAP / 2 : 0), width: x(edges[i + 1]) - x(edges[i]) - (i ? GAP : GAP / 2), backgroundColor: z === current ? color : alpha(colors.moon, 0.14) }]}
               />
             ))}
             {b.usual != null && <View style={[styles.usual, { left: x(b.usual) - 1 }]} />}

@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Animated, PanResponder, Platform, Pressable, StyleSheet, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
-import { SAMPLES_PER_MINUTE, clockAt, dbAt, type Clip, type NightDetails } from '../lib/nightDetails';
-import { colors, loudness, motion, radius, space, useReducedMotion } from '../theme';
+import { INTENSITY_LABEL, SAMPLES_PER_MINUTE, clockAt, dbAt, type Clip, type Intensity, type NightDetails } from '../lib/nightDetails';
+import { alpha, colors, loudness, motion, radius, space, useReducedMotion } from '../theme';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
 
@@ -14,6 +14,13 @@ const LANE = 18; // event markers above the plot
 const MIN_SPAN = 2; // closest zoom, in minutes
 const STEP = 2; // zoom factor per button press
 
+// The fill: one spiky shape with a vertical gradient through the `loudness` ramp. Each colour is pinned
+// to its level's typical decibels (as in nightDetails), so the quiet floor stays cyan and only very loud
+// peaks reach red. Same colours and names as LoudnessBars.
+const LEVEL_DB: Record<Intensity, number> = { light: 47, moderate: 54, loud: 61, veryLoud: 68 };
+const LEVELS = (['light', 'moderate', 'loud', 'veryLoud'] as const).map((k) => ({ key: k, label: INTENSITY_LABEL[k], color: loudness[k], db: LEVEL_DB[k] }));
+const TOP_DB = LEVELS[LEVELS.length - 1].db;
+
 type Event = { at: number; kind: 'pause' | 'cough' | 'movement' };
 const EVENT_LABEL: Record<Event['kind'], string> = {
   pause: 'Breathing pause',
@@ -24,7 +31,7 @@ const EVENT_LABEL: Record<Event['kind'], string> = {
 /**
  * Snoring through the night: the sound level, every 20 seconds, as one filled shape against a
  * decibel scale. Built to match Engineering's interactive chart, in the Airese palette:
- *   fill       the Ember ramp, light at the base to deep at the top (louder reads stronger; no rainbow, no red)
+ *   fill       the `loudness` ramp, cyan → yellow → orange → red, pinned to decibels (see LEVELS)
  *   lane       events above the plot, each its own shape: breathing pause (Iris pill), cough (Moon
  *              diamond), movement (Mist ring), so colour is never the only cue
  *   playhead   a Moon line with a dot on the axis; the readout above gives its time and level
@@ -59,6 +66,7 @@ export function SnoringChart({
   const reduced = useReducedMotion();
   const total = d.night.minutes;
   const H = height;
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, ''); // gradient ids, one set per chart on the page
   const [width, setWidth] = useState(0);
   const [view, setView] = useState({ start: 0, end: total });
   const [head, setHead] = useState<number | null>(null);
@@ -153,6 +161,12 @@ export function SnoringChart({
   const x = (m: number) => ((m - view.start) / span) * width;
   const y = (db: number) => H - ((Math.max(DB_MIN, Math.min(DB_MAX, db)) - DB_MIN) / (DB_MAX - DB_MIN)) * (H - LANE);
   const area = useMemo(() => (width ? areaPath(d.envelope, view.start, view.end, width, H, LANE) : ''), [d, view, width, H]);
+  const hours = useMemo(() => {
+    const first = (60 - (d.night.startMinutes % 60)) % 60;
+    const marks: number[] = [];
+    for (let m = first; m < total; m += 60) marks.push(m);
+    return marks;
+  }, [d, total]);
 
   const peak = useMemo(() => {
     const i0 = Math.floor(view.start * SAMPLES_PER_MINUTE);
@@ -205,10 +219,13 @@ export function SnoringChart({
         >
           {width > 0 && (
             <>
-              {/* Decibel grid (static) */}
+              {/* Hour stripes and decibel grid (static) */}
               <Svg width={width} height={H} style={StyleSheet.absoluteFill} pointerEvents="none">
+                {hours.map((m, i) =>
+                  i % 2 === 0 ? <Rect key={m} x={x(m)} y={LANE} width={x(Math.min(total, m + 60)) - x(m)} height={H - LANE} fill={alpha(colors.mist, 0.05)} /> : null,
+                )}
                 {GRID.map((db) => (
-                  <Line key={db} x1={0} x2={width} y1={y(db)} y2={y(db)} stroke="rgba(179, 189, 211, 0.14)" strokeWidth={1} strokeDasharray="3 5" />
+                  <Line key={db} x1={0} x2={width} y1={y(db)} y2={y(db)} stroke={alpha(colors.mist, 0.14)} strokeWidth={1} strokeDasharray="3 5" />
                 ))}
               </Svg>
 
@@ -237,20 +254,20 @@ export function SnoringChart({
               >
                 <Svg width={width} height={H}>
                   <Defs>
-                    <LinearGradient id="level" x1="0" y1={y(75)} x2="0" y2={H} gradientUnits="userSpaceOnUse">
-                      <Stop offset="0" stopColor={loudness.veryLoud} />
-                      <Stop offset="0.35" stopColor={loudness.loud} />
-                      <Stop offset="0.7" stopColor={loudness.moderate} />
-                      <Stop offset="1" stopColor={loudness.light} stopOpacity={0.6} />
+                    {/* Red at TOP_DB and above, down through orange and yellow to cyan at the floor */}
+                    <LinearGradient id={`level${uid}`} x1="0" y1={y(TOP_DB)} x2="0" y2={H} gradientUnits="userSpaceOnUse">
+                      {[...LEVELS].reverse().map((l) => (
+                        <Stop key={l.key} offset={(TOP_DB - l.db) / (TOP_DB - DB_MIN)} stopColor={l.color} />
+                      ))}
                     </LinearGradient>
                   </Defs>
-                  <Path d={area} fill="url(#level)" />
+                  <Path d={area} fill={`url(#level${uid})`} />
                 </Svg>
               </Animated.View>
 
               {/* Baseline, events and playhead (static) */}
               <Svg width={width} height={H + 8} style={styles.overlay} pointerEvents="none">
-                <Line x1={0} x2={width} y1={H - 0.5} y2={H - 0.5} stroke="rgba(179, 189, 211, 0.35)" strokeWidth={1} />
+                <Line x1={0} x2={width} y1={H - 0.5} y2={H - 0.5} stroke={alpha(colors.mist, 0.35)} strokeWidth={1} />
                 {visible.map((ev, i) =>
                   ev.kind === 'pause' ? (
                     <Rect key={i} x={x(ev.at) - pillW / 2} y={2} width={pillW} height={8} rx={4} fill={colors.dataBreathing} />
@@ -332,16 +349,11 @@ export function SnoringChart({
             <Key swatch={<View style={styles.keyRing} />} label="Movement" />
           </>
         )}
-        <Key
-          swatch={
-            <View style={styles.ramp}>
-              {[loudness.light, loudness.moderate, loudness.loud, loudness.veryLoud].map((c) => (
-                <View key={c} style={[styles.rampStep, { backgroundColor: c }]} />
-              ))}
-            </View>
-          }
-          label="Quieter to louder"
-        />
+      </View>
+      <View style={styles.legend}>
+        {LEVELS.map((l) => (
+          <Key key={l.key} swatch={<View style={[styles.levelKey, { backgroundColor: l.color }]} />} label={l.label} />
+        ))}
       </View>
     </View>
   );
@@ -453,7 +465,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(238, 241, 247, 0.08)',
+    backgroundColor: alpha(colors.moon, 0.08),
   },
   whole: {
     minHeight: 44,
@@ -497,11 +509,5 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.textMuted,
   },
-  ramp: {
-    flexDirection: 'row',
-    gap: 2,
-    borderRadius: radius.pill,
-    overflow: 'hidden',
-  },
-  rampStep: { width: 10, height: 8 },
+  levelKey: { width: 6, height: 18, borderRadius: radius.pill },
 });

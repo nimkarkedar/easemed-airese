@@ -1,6 +1,7 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { NightNotesScreen } from '../screens/NightNotesScreen';
 
 export default function NightNotes() {
-  return <NightNotesScreen onClose={() => (router.canGoBack() ? router.back() : router.replace('/home'))} />;
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  return <NightNotesScreen backLabel={from === 'recording' ? 'Recording' : 'Home'} onClose={() => (router.canGoBack() ? router.back() : router.replace('/home'))} />;
 }

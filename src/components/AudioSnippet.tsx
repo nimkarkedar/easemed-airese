@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { CLIP_LABEL, type Clip } from '../lib/nightDetails';
-import { colors, space } from '../theme';
+import { alpha, colors, space } from '../theme';
+import { AppText } from './AppText';
+import { Icon } from './Icon';
 
 /** Data colour for a clip: breathing moments in Iris, snoring in Ember. */
 export const clipColor = (clip: Clip) => (clip.type === 'Interrupted breathing' ? colors.dataBreathing : colors.dataSnoring);
-import { AppText } from './AppText';
-import { Icon } from './Icon';
 
 const BAR_W = 2;
 const BAR_GAP = 2;
@@ -118,7 +118,7 @@ export function AudioSnippet({ clip, time, player }: { clip: Clip; time: string;
       </View>
       {/* Waveform: Mist underneath, Breath on top revealed as it plays */}
       <View style={{ width: waveWidth, height: WAVE_H }} accessible={false} importantForAccessibility="no-hide-descendants">
-        {wave('rgba(179, 189, 211, 0.35)')}
+        {wave(alpha(colors.mist, 0.35))}
         {position ? (
           <Animated.View style={[StyleSheet.absoluteFill, { overflow: 'hidden', width: position.interpolate({ inputRange: [0, 1], outputRange: [0, waveWidth] }) }]}>
             <View style={{ width: waveWidth }}>{wave(clipColor(clip))}</View>

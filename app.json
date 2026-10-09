@@ -33,7 +33,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Airese listens while you sleep to capture snoring and breathing. Recordings stay on your device unless you choose to share them."
+          "microphonePermission": "Airese listens all night for snoring and breathing. Your recordings stay on your phone unless you choose to share them."
         }
       ]
     ]

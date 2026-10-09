@@ -1,19 +1,24 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { colors, radius, space, type } from '../theme';
+import { alpha, colors, loudness, radius, space, type } from '../theme';
 import { AppText } from './AppText';
 import { Icon, type IconName } from './Icon';
-import { ScoreRing } from './ScoreRing';
+import { ScoreRing, rampColor } from './ScoreRing';
 import type { DataTone } from './DataCard';
 
 const INK: Record<Exclude<DataTone, 'neutral'>, string> = { snoring: colors.dataSnoring, breathing: colors.dataBreathing, sleep: colors.dataSleep };
 const TINT: Record<Exclude<DataTone, 'neutral'>, string> = { snoring: colors.tintSnoring, breathing: colors.tintBreathing, sleep: colors.tintSleep };
+// Snoring and breathing pauses: more is worse, so their rings run through the loudness ramp (cyan to red).
+// Sleep (more is better) keeps its own colour.
+const RAMP = [loudness.light, loudness.moderate, loudness.loud, loudness.veryLoud] as const;
+const RAMPED: Partial<Record<Exclude<DataTone, 'neutral'>, boolean>> = { snoring: true, breathing: true };
 
 /**
  * One headline score, half width, two side by side (Recording Details, top of the page):
  *   a big ring in the data's colour with the number inside · the name · a level word on a soft tint
  *   · one line saying what the number is made of. The whole tile opens the full story.
- * The level is a word, never a colour alone; the ring and tint are the data's colour, never red.
+ * The level is a word, never a colour alone. Snoring and breathing rings run through the loudness ramp
+ * (red only near the top of the scale), and the level dot takes the colour the ring ends in.
  * No `value`: the ring holds the data's icon instead (breathing: a plain level on the page, the
  * exact rate in its sheet).
  */
@@ -38,6 +43,8 @@ export function ScoreTile({
   onPress?: () => void;
   accessibilityLabel?: string;
 }) {
+  const ramped = RAMPED[tone];
+  const ink = ramped ? rampColor(RAMP, Math.max(0.04, Math.min(1, fraction))) : INK[tone];
   return (
     <Pressable
       onPress={onPress}
@@ -51,7 +58,7 @@ export function ScoreTile({
           <Icon name="chevron_right" size={20} color="textMuted" />
         </View>
       ) : null}
-      <ScoreRing fraction={fraction} color={INK[tone]} size={116} stroke={10}>
+      <ScoreRing fraction={fraction} color={INK[tone]} ramp={ramped ? RAMP : undefined} size={116} stroke={10}>
         {value ? (
           <AppText variant="title" color="text" numberOfLines={1}>
             {value}
@@ -63,8 +70,8 @@ export function ScoreTile({
       <AppText color="text" style={styles.name} numberOfLines={1}>
         {name}
       </AppText>
-      <View style={[styles.level, { backgroundColor: TINT[tone] }]}>
-        <View style={[styles.dot, { backgroundColor: INK[tone] }]} />
+      <View style={[styles.level, { backgroundColor: ramped ? alpha(colors.moon, 0.08) : TINT[tone] }]}>
+        <View style={[styles.dot, { backgroundColor: ink }]} />
         <AppText variant="small" color="text">
           {level}
         </AppText>

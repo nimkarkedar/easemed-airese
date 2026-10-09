@@ -14,6 +14,8 @@ type Illustration = { source: ImageSourcePropType; px: number; cx: number; cy: n
 type Slide = {
   title: string;
   body: string;
+  /** What the page's (i) says. */
+  info: string;
   illustration: Illustration;
   /** Last page only: the way forward. */
   showContinue?: boolean;
@@ -22,18 +24,21 @@ type Slide = {
 // Copy as supplied by design (Oct 2026).
 const SLIDES: Slide[] = [
   {
-    title: 'Know your sleep.',
-    body: 'Track how you sleep.\nSee the patterns.',
+    title: 'Let’s find out what happens while you sleep.',
+    body: 'Your phone does the work. No watch, ring or mat.',
+    info: 'Put your phone by the bed and tap record. Airese listens for snoring and breathing, and keeps short moments you can play back in the morning.',
     illustration: { source: require('../../assets/onboarding/1-hear.jpg'), px: 1254, cx: 622, cy: 598, d: 1117 },
   },
   {
-    title: 'Completely private.',
-    body: 'Your data stays on your device.\nEverything is stored locally.',
+    title: 'Private by default.',
+    body: 'Your recordings stay on your phone.',
+    info: 'Airese works out your night on your phone. Nothing leaves it unless you choose to share a report.',
     illustration: { source: require('../../assets/onboarding/2-private.jpg'), px: 1254, cx: 624, cy: 607, d: 1139 },
   },
   {
-    title: 'Get actionable insights',
-    body: 'Understand your sleeping behaviour.\nSeek care as required.',
+    title: 'A clearer next step.',
+    body: 'Know when to watch, when to share, and when to get checked.',
+    info: 'One night is hard to read on its own. Airese only suggests talking to a doctor when the same thing shows up night after night.',
     illustration: { source: require('../../assets/onboarding/3-pattern.jpg'), px: 1254, cx: 633, cy: 592, d: 1100 },
     showContinue: true,
   },
@@ -264,7 +269,7 @@ function Carousel({ width, height, onContinue }: { width: number; height: number
       <BottomSheet visible={infoFor !== null} onClose={() => setInfoFor(null)}>
         <AppText variant="heading">{SLIDES[lastInfo].title}</AppText>
         <AppText color="textMuted" style={{ marginTop: space.sm }}>
-          More detail coming soon.
+          {SLIDES[lastInfo].info}
         </AppText>
       </BottomSheet>
     </View>

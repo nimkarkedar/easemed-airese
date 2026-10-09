@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Airese · iPhone 17 Pro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Montserrat:wght@400;600&display=swap" />
 <style>
   :root { --page: #E9EBF0; --ink: #1A1A1A; --muted: #6B6F78; --field: #FFFFFF; --field-edge: #D3D6DE; --frame: #2B3140; --frame-edge: #4A5266; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page: #0A0D16; --ink: #F2F3F5; --muted: #8C93A6; --field: #141A28; --field-edge: #2A3244; } }
@@ -69,11 +69,11 @@
       <optgroup label="App">
         <option value="home">Home</option>
         <option value="home-after-first-night">Home · after first night</option>
-        <option value="recording">Recording Sleep</option>
-        <option value="recordings">Recordings</option>
+        <option value="recording">Recording</option>
+        <option value="reports">Reports</option>
         <option value="profile">Profile</option>
       </optgroup>
-      <optgroup label="Recording details">
+      <optgroup label="Reports · last night">
         <option value="night-steady">Ordinary night</option>
         <option value="night-unusual">Unusual night</option>
         <option value="night-pattern">Repeated pattern</option>
@@ -113,9 +113,9 @@
   // Demo: jump to a screen. On localhost the phone loads that route; in the shared preview
   // (no router) the app listens for 'airese:jump'. Either way the menu follows the app.
   (function () {
-    var ROUTES = { splash: '/', onboarding: '/onboarding', microphone: '/permissions/microphone', notifications: '/permissions/notifications', details: '/details', home: '/home', 'home-after-first-night': '/home?state=after-first-night', recording: '/recording', recordings: '/recordings', profile: '/profile',
-      'night-steady': '/night/latest?state=steady', 'night-unusual': '/night/latest?state=unusual', 'night-pattern': '/night/latest?state=pattern',
-      'night-first': '/night/latest?state=first', 'night-poor': '/night/latest?state=poor', 'night-processing': '/night/latest?state=processing' };
+    var ROUTES = { splash: '/', onboarding: '/onboarding', microphone: '/permissions/microphone', notifications: '/permissions/notifications', details: '/details', home: '/home', 'home-after-first-night': '/home?state=after-first-night', recording: '/recording', reports: '/reports', profile: '/profile',
+      'night-steady': '/reports?state=steady', 'night-unusual': '/reports?state=unusual', 'night-pattern': '/reports?state=pattern',
+      'night-first': '/reports?state=first', 'night-poor': '/reports?state=poor', 'night-processing': '/reports?state=processing' };
     var select = document.getElementById('jump');
     var frame = document.getElementById('app');
     select.addEventListener('change', function () {

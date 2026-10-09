@@ -24,30 +24,37 @@ const tokens = read('src/theme/tokens.ts');
 const block = (name) => tokens.match(new RegExp(`(?:const|export const) ${name} = \\{([\\s\\S]*?)\\n\\}`))[1];
 
 // Palette: name: '#hex', // what it's for
-const palette = [...block('palette').matchAll(/(\w+): '(#[0-9A-Fa-f]{6})', \/\/ (.*)/g)].map(([, name, hex, note]) => ({ name, hex, note: note.trim() }));
+// Token comments carry history and asides; the page shows only the first plain clause.
+const clean = (note = '') => note.split(/ \(|\. |; |: (?=[A-Z])/)[0].trim();
+const palette = [...block('palette').matchAll(/(\w+): '(#[0-9A-Fa-f]{6})', \/\/ (.*)/g)].map(([, name, hex, note]) => ({ name, hex, note: clean(note) }));
 const hexOf = Object.fromEntries(palette.map((p) => [p.name, p.hex]));
 
-// Roles and other colours: name: palette.x | 'literal', // note
-const colorLines = [...block('colors').matchAll(/^\s+(\w+): (palette\.\w+|'[^']+'),?(?: \/\/ (.*))?$/gm)].map(([, name, v, note]) => ({
-  name,
-  value: v.startsWith('palette.') ? hexOf[v.slice(8)] : v.slice(1, -1),
-  ref: v.startsWith('palette.') ? v.slice(8) : null,
-  note: (note ?? '').trim(),
-}));
-const loudness = [...tokens.matchAll(/export const loudness = \{([^}]*)\}/g)][0][1].split(',').map((s) => s.trim()).filter(Boolean).map((s) => s.match(/(\w+): '(#\w+)'/)).map(([, n, hex]) => ({ name: n, hex }));
+// Roles and other colours: name: palette.x | alpha(palette.x, 0.16) | 'literal', // note
+const rgba = (hex, a) => `rgba(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')}, ${a})`;
+const colorLines = [...block('colors').matchAll(/^\s+(\w+): (palette\.\w+|alpha\(palette\.\w+, [\d.]+\)|'[^']+'),?(?: \/\/ (.*))?$/gm)].map(([, name, v, note]) => {
+  const tint = v.match(/^alpha\(palette\.(\w+), ([\d.]+)\)$/);
+  return {
+    name,
+    value: tint ? rgba(hexOf[tint[1]], tint[2]) : v.startsWith('palette.') ? hexOf[v.slice(8)] : v.slice(1, -1),
+    ref: tint ? `${tint[1]} at ${Math.round(Number(tint[2]) * 100)}%` : v.startsWith('palette.') ? v.slice(8) : null,
+    note: clean(note ?? ''),
+  };
+});
+const loudness = [...tokens.matchAll(/export const loudness = \{([^}]*)\}/g)][0][1].split(',').map((s) => s.trim()).filter(Boolean).map((s) => s.match(/(\w+): (palette\.\w+|'#\w+')/)).map(([, n, v]) => ({ name: n, hex: v.startsWith('palette.') ? hexOf[v.slice(8)] : v.slice(1, -1) }));
 const gradients = [...block('gradients').matchAll(/(\w+): \[([\s\S]*?)\]/g)].map(([, name, body]) => ({
   name,
   stops: [...body.matchAll(/offset: ([\d.]+), color: (palette\.\w+|'#\w+')/g)].map(([, o, c]) => ({ offset: Number(o), color: c.startsWith('palette.') ? hexOf[c.slice(8)] : c.slice(1, -1) })),
 }));
-const numbers = (name) => [...block(name).matchAll(/(\w+): (\d+),(?: \/\/ (.*))?/g)].map(([, n, v, note]) => ({ name: n, value: Number(v), note: (note ?? '').trim() }));
+const numbers = (name) => [...block(name).matchAll(/(\w+): (\d+),(?: \/\/ (.*))?/g)].map(([, n, v, note]) => ({ name: n, value: Number(v), note: clean(note ?? '') }));
 const space = numbers('space');
 const radius = numbers('radius');
-const typeScale = [...tokens.matchAll(/^\s+(\w+): \{ \.\.\.font\('(\d+)'\), fontSize: (\d+), lineHeight: (\d+) \},? \/\/ (.*)$/gm)].map(([, name, weight, size, lh, note]) => ({
+const typeScale = [...tokens.matchAll(/^\s+(\w+): \{ \.\.\.font\('(\w+)', '(\d+)'\), fontSize: (\d+), lineHeight: (\d+) \},? \/\/ (.*)$/gm)].map(([, name, family, weight, size, lh, note]) => ({
   name,
+  family,
   weight: Number(weight),
   size: Number(size),
   lh: Number(lh),
-  note: note.trim(),
+  note: clean(note),
 }));
 
 const motionSrc = read('src/theme/motion.ts');
@@ -75,10 +82,19 @@ const docOf = (src, name) => {
   const before = at > 0 ? src.slice(0, at) : src;
   const docs = [...before.matchAll(/\/\*\*([\s\S]*?)\*\//g)];
   const raw = docs.length ? docs[docs.length - 1][1] : '';
+  // For the page: the first paragraph only, without notes meant for developers
+  // (PRD references, "after the reference", Prototype / Engineering / Direction notes).
   return raw
     .split('\n')
     .map((l) => l.replace(/^\s*\*\s?/, ''))
     .join('\n')
+    .trim()
+    .split(/\n\s*\n/)[0]
+    .replace(/\s*\((?:PRD|after the reference|see )[^)]*\)/gi, '')
+    .split('\n')
+    .filter((l) => !/^(Prototype|Engineering|Direction|BROWSER PREVIEW|Source:)/i.test(l.trim()))
+    .join(' ')
+    .replace(/\s+/g, ' ')
     .trim();
 };
 const usedIn = (name) =>
@@ -89,6 +105,57 @@ const usedIn = (name) =>
         .map(([f]) => basename(f).replace(/\.tsx?$/, '').replace(/Screen$/, '').replace(/^_layout.*/, 'Root layout').replace(/^index$/, 'Preview')),
     ),
   ];
+
+// One line per component for the page (plain, short). Code doc comments stay for developers.
+const BLURB = {
+  "AppText": "The only text component. Applies a type style and colour; scales to 200%.",
+  "Icon": "A Material Symbol by name, size and colour token.",
+  "Logo": "The stacked Airese logo.",
+  "PageTitle": "Large title for tab screens, with an optional control on the right (the avatar).",
+  "DetailPage": "Page opened from a row: back button, large title, sticky compact title on scroll, optional sticky footer.",
+  "AmbientGradient": "The splash blues with two faint glows drifting across. Static with Reduce Motion.",
+  "TabBar": "Floating two-tab bar for web and the preview. Native builds use the system tab bar.",
+  "Screen": "Background, safe areas and status bar for a full screen.",
+  "Button": "Pill button, 48 pt. Primary: Breath fill. Quiet: text only.",
+  "IconButton": "Round 56 pt Breath button with an icon. Needs an accessibility label.",
+  "InfoButton": "The (i) that opens an explanation.",
+  "Avatar": "44 pt circle with initials, or a person icon. Opens Profile.",
+  "ToggleChip": "Pill that switches on and off. Reads as a checkbox.",
+  "ChipGroup": "Wraps chips across lines.",
+  "SettingSwitch": "A label and a switch. Greyed out when disabled.",
+  "SegmentedControl": "iOS-style segmented control with a sliding Breath thumb.",
+  "FormGroup": "Grouped form card with a title and footer. Outlines on focus and on error.",
+  "FormInput": "A plain text input row.",
+  "FormDivider": "Hairline between rows.",
+  "SettingRow": "Row with icon, title and detail. Chevron opens a page; an action pill acts in place.",
+  "SettingsCard": "Breath-outlined card of rows (Home).",
+  "SettingsRow": "Row in a SettingsCard: icon, title, detail, trailing hint, optional caution mark.",
+  "Card": "Deep surface with optional title and (i).",
+  "InsightCard": "A plain-language takeaway. Tones: plain, hero (the verdict), warm (what it means).",
+  "DataCard": "Results card in two shapes, wide and square: label, visual or number, one line of insight.",
+  "BigNumber": "The big number in a card. No small units.",
+  "ScoreTile": "Headline score: a ring with the number or an icon, the name, a level word, a trend.",
+  "BottomSheet": "Sheet over a dimmed screen. Tap outside or drag down to close.",
+  "ExplainSheet": "Short explanation in a sheet, with an optional action.",
+  "LargeSheet": "Near full-height sheet for “more” on a card.",
+  "PermissionSheet": "Asks again for a permission, or points to Settings if the system won’t ask.",
+  "Toast": "Short confirmation that fades in and out.",
+  "SystemAlertHost": "Browser preview only: stands in for the iOS permission alert.",
+  "RecordDial": "The record button in a ring of ticks. Tap to start.",
+  "ListeningRing": "Stop button inside bars that move with the sound level.",
+  "SnoringChart": "The night’s sound level against a dB scale, with events marked above. Overview: tap to pick a moment. Explore: playhead, zoom.",
+  "NightTimeline": "Snoring bars, breathing ticks and an asleep line across the night; optional clip rings.",
+  "ScoreRing": "Ring filled to a fraction, with an icon or number inside.",
+  "BenchmarkScale": "Bar of named zones, with markers for tonight and your usual.",
+  "HourlyBars": "Minutes or counts per hour of the night.",
+  "LoudnessBars": "How snoring split by loudness.",
+  "RecentNightsChart": "Last 7 nights as bars, with a line at your usual.",
+  "ComparisonIndicator": "Trend arrow with words: more, about or less than usual.",
+  "ClipPlayer": "Large clip player: waveform with pause and loud-breath marks, scrubber, play/pause.",
+  "AudioSnippet": "Compact clip row with play/pause and a small waveform.",
+  "CareCTA": "Sticky next step: “Keep tracking”, or “Talk to a sleep care team” for a repeated pattern.",
+  "PrivacyFooter": "“Private by design” page footer."
+};
 
 const GROUPS = [
   ['Foundations', [['AppText'], ['Icon'], ['Logo']]],
@@ -107,7 +174,7 @@ const components = GROUPS.map(([group, items]) => ({
   items: items.map(([name, file = name]) => {
     const path = `src/components/${file}.tsx`;
     const src = sources[path] ?? '';
-    return { name, path, doc: docOf(src, name), used: usedIn(name) };
+    return { name, path, doc: BLURB[name] ?? docOf(src, name), used: usedIn(name) };
   }),
 }));
 
@@ -171,13 +238,14 @@ const html = `<!doctype html>
 <title>Airese Design System</title>
 <meta name="description" content="Tokens, type, motion, icons, brand assets and React Native components used to build Airese.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root { --night:#05070F; --midnight:#0B1020; --deep:#19294E; --mist:#B3BDD3; --moon:#EEF1F7; --breath:#9DB4FF; --lamp:#F4B65F; --line:rgba(179,189,211,.18); }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-  body { margin:0; background:var(--midnight); color:var(--moon); font:400 16px/1.6 Montserrat, system-ui, sans-serif; }
+  body { margin:0; background:var(--midnight); color:var(--moon); font:400 16px/1.6 Inter, system-ui, sans-serif; }
+  h1,h2,h3,.title-font { font-family:Montserrat, system-ui, sans-serif; }
   a { color:var(--breath); }
   a:focus-visible, summary:focus-visible { outline:2px solid var(--breath); outline-offset:3px; border-radius:4px; }
   code { font:13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--mist); }
@@ -239,7 +307,7 @@ const html = `<!doctype html>
   details.comp summary b { font-size:16px; }
   details.comp summary span { font-size:12px; color:var(--mist); text-align:right; }
   details.comp[open] summary { border-bottom:1px solid var(--line); }
-  details.comp pre { white-space:pre-wrap; font:14px/1.6 Montserrat, sans-serif; color:var(--moon); margin:12px 0; }
+  details.comp .blurb { font-size:14px; margin:12px 0; }
   details.comp .meta { font-size:13px; color:var(--mist); padding-bottom:16px; }
   .tag { display:inline-block; font-size:12px; padding:2px 10px; border-radius:999px; background:rgba(244,182,95,.12); color:var(--lamp); margin-left:6px; }
   footer { padding:56px 0 72px; text-align:center; color:var(--mist); font-size:14px; }
@@ -251,7 +319,7 @@ const html = `<!doctype html>
 <header class="top">
   <div class="wrap">
     <div class="brand">${logo('airese-logo.svg')}<div><div class="muted" style="font-size:14px">Airese by Easmed · powered by The Air Station</div><h1>Design system</h1></div></div>
-    <p class="lead">Everything used to build the Airese app: colour, type, spacing, motion, icons, brand assets and every React Native component. Generated from the code, so it always matches what ships.</p>
+    <p class="lead">Colour, type, spacing, motion, icons, brand assets and React Native components used in the Airese app. Generated from the code.</p>
     <div class="links">
       <a href="../">Open the prototype</a>
       <a href="${REPO}/docs/BRAND.md">Brand brief</a>
@@ -260,10 +328,10 @@ const html = `<!doctype html>
       <a href="${REPO}/src/theme/tokens.ts">tokens.ts</a>
     </div>
     <div class="rules">
-      <div class="rule"><b>Tokens only</b>Screens use tokens and components. No hard-coded colours, sizes, timings or curves.</div>
-      <div class="rule"><b>One text, one icon</b>Text goes through <code>AppText</code>; icons through <code>Icon</code>.</div>
-      <div class="rule"><b>Two motion presets</b>Every animation uses <code>slow</code> or <code>fast</code>. Reduce Motion is respected.</div>
-      <div class="rule"><b>WCAG 2.2 AAA</b>7:1 text, 44 pt targets, nothing under 12 pt, colour never the only cue.</div>
+      <div class="rule"><b>Tokens only</b>No hard-coded colours, sizes, timings or curves.</div>
+      <div class="rule"><b>One text, one icon</b>Text through <code>AppText</code>, icons through <code>Icon</code>.</div>
+      <div class="rule"><b>Two motion presets</b><code>slow</code> and <code>fast</code>. Reduce Motion respected.</div>
+      <div class="rule"><b>WCAG 2.2 AAA</b>7:1 text, 44 pt targets, 12 pt minimum.</div>
     </div>
   </div>
 </header>
@@ -274,15 +342,14 @@ const html = `<!doctype html>
 
 <section id="colour">
   <h2>Colour</h2>
-  <p class="muted">“Night, with one warm light.” A dark UI for use in bed, with one warm accent used sparingly. Red is for form errors only, never for sleep data. Contrast ratios (for colours used as text or marks) are against Midnight.</p>
+  <p class="muted">Dark UI with one warm accent. One red, Flare: form errors and the loudest snoring in charts. Contrast ratios are against Midnight.</p>
   <h3>Palette</h3>
   <div class="grid">${palette.map((p) => swatch(p.hex, p.name[0].toUpperCase() + p.name.slice(1), p.note, Number(contrast(p.hex)) >= 3 ? `<span class="ratio">${contrast(p.hex)}:1 on Midnight</span>` : '')).join('')}</div>
   <h3>Roles and special colours</h3>
-  <p class="muted">What screens use. Each role points at a palette colour or a fixed value.</p>
   <div class="grid">${roles.map((c) => swatch(c.value, c.name, c.note || (c.ref ? `= ${c.ref}` : ''))).join('')}</div>
   <h3>Loudness ramp</h3>
-  <p class="muted">One hue, light to deep, so louder reads as stronger. Magnitude, so never a rainbow, and never red. Used for the snoring chart’s fill and the intensity split.</p>
-  <div class="ramp" role="img" aria-label="Loudness ramp from light to very loud">${loudness.map((l) => `<div style="background:${l.hex}"></div>`).join('')}</div>
+  <p class="muted">Snoring loudness, quiet to very loud: cyan, yellow, orange, red. Charts and graphs only, never text or UI.</p>
+  <div class="ramp" role="img" aria-label="Loudness ramp from quiet to very loud">${loudness.map((l) => `<div style="background:${l.hex}"></div>`).join('')}</div>
   <div class="grid">${loudness.map((l) => swatch(l.hex, l.name, '')).join('')}</div>
   <h3>Gradients</h3>
   <div class="grid">${gradients
@@ -290,7 +357,7 @@ const html = `<!doctype html>
       swatch(
         `linear-gradient(180deg, ${g.stops.map((s) => `${s.color} ${s.offset * 100}%`).join(', ')})`,
         g.name,
-        g.name === 'splash' ? 'Splash, Home and Recording backgrounds; the record button' : 'The verdict card on Recording Details',
+        g.name === 'splash' ? 'Splash, Home, Recording, record button' : 'Verdict card',
       ),
     )
     .join('')}</div>
@@ -305,11 +372,11 @@ const html = `<!doctype html>
 
 <section id="type">
   <h2>Typography</h2>
-  <p class="muted">Montserrat. Two weights in use, regular (400) and semibold (600). Steps of about 1.25. Nothing smaller than 12. Reading text at 1.5× line height or more. Scales with the system text size up to 200%.</p>
-  <div class="scroll"><table class="specimen"><thead><tr><th>Variant</th><th>Sample</th><th>Size / line</th><th>Weight</th><th>Use</th></tr></thead><tbody>
-  ${typeScale.map((t) => `<tr><td><code>${t.name}</code></td><td style="font-size:${t.size}px;line-height:${t.lh}px;font-weight:${t.weight}">You snored for 42 minutes</td><td>${t.size} / ${t.lh}</td><td>${t.weight}</td><td class="muted">${esc(t.note)}</td></tr>`).join('')}
+  <p class="muted">Montserrat for titles and buttons; Inter for everything you read. Regular (400) and semibold (600) only. 12 pt minimum. Scales to 200% with system text size.</p>
+  <div class="scroll"><table class="specimen"><thead><tr><th>Variant</th><th>Sample</th><th>Font</th><th>Size / line</th><th>Weight</th><th>Use</th></tr></thead><tbody>
+  ${typeScale.map((t) => `<tr><td><code>${t.name}</code></td><td style="font-family:${t.family}, system-ui, sans-serif;font-size:${t.size}px;line-height:${t.lh}px;font-weight:${t.weight}">You snored for 42 minutes</td><td>${t.family}</td><td>${t.size} / ${t.lh}</td><td>${t.weight}</td><td class="muted">${esc(t.note)}</td></tr>`).join('')}
   </tbody></table></div>
-  <p class="muted" style="margin-top:16px">Big numbers are one size and weight with no small units; durations are compact (“7h 36m”). Times use tabular figures. Form group titles are uppercase with 1 pt letter spacing.</p>
+  <p class="muted" style="margin-top:16px">Durations: “7h 36m”. Times use tabular figures. Form group titles: uppercase, 1 pt tracking.</p>
 </section>
 
 <section id="space">
@@ -321,16 +388,16 @@ const html = `<!doctype html>
   <h3>Layout</h3>
   <div class="scroll"><table><tbody>
     <tr><td>Screen edge</td><td>20 (<code>space.gutter</code>, <code>PAGE_SIDE</code>)</td></tr>
-    <tr><td>Touch target</td><td>44 pt minimum: buttons 48, icon buttons 56, setting rows 64</td></tr>
+    <tr><td>Touch target</td><td>44 pt minimum. Buttons 48, icon buttons 56, rows 64</td></tr>
     <tr><td>Sticky top bar</td><td>44 pt below the status bar (<code>DetailPage</code>)</td></tr>
     <tr><td>Tab bar clearance</td><td>96 pt (<code>TAB_BAR_CLEARANCE</code>)</td></tr>
-    <tr><td>Depth</td><td>Flat: colour, not shadows. Exceptions: a soft Breath glow on the record button and verdict card, frosted bars behind sticky titles.</td></tr>
+    <tr><td>Depth</td><td>No shadows. Breath glow on the record button and verdict card; frosted sticky bars.</td></tr>
   </tbody></table></div>
 </section>
 
 <section id="motion">
   <h2>Motion</h2>
-  <p class="muted">Two presets, one feel: like settling down for the night. Nothing snaps, bounces or overshoots. Swipes and scrolls follow the finger. Press play to see each curve.</p>
+  <p class="muted">Two presets. No bounce or overshoot. Press a button to see the curve.</p>
   <div class="scroll"><table><thead><tr><th>Preset</th><th>Duration</th><th>easeOut (arriving)</th><th>easeIn (leaving)</th><th>easeInOut (between)</th></tr></thead><tbody>
   ${presets.map((p) => `<tr><td><code>motion.${p.name}</code></td><td>${p.duration} ms</td><td><code>${p.easeOut}</code></td><td><code>${p.easeIn}</code></td><td><code>${p.easeInOut}</code></td></tr>`).join('')}
   </tbody></table></div>
@@ -345,16 +412,16 @@ const html = `<!doctype html>
   </div>
   <h3>Helpers</h3>
   <div class="scroll"><table><tbody>
-    <tr><td><code>motion.ambient</code></td><td>${ambient} ms, sine in-out</td><td class="muted">Background life: the gradient drift, the record button’s breathing</td></tr>
-    <tr><td><code>motion.attention</code></td><td>${attention[1]} ms, then ${attention[2]} ms rest</td><td class="muted">A light that runs once round the record ring to invite a tap</td></tr>
-    <tr><td><code>motion.stagger</code></td><td>${stagger} ms</td><td class="muted">Offset between steps, so things arrive in sequence</td></tr>
+    <tr><td><code>motion.ambient</code></td><td>${ambient} ms, sine in-out</td><td class="muted">Gradient drift, record button breathing</td></tr>
+    <tr><td><code>motion.attention</code></td><td>${attention[1]} ms, then ${attention[2]} ms rest</td><td class="muted">Light that runs round the record ring</td></tr>
+    <tr><td><code>motion.stagger</code></td><td>${stagger} ms</td><td class="muted">Delay between steps</td></tr>
   </tbody></table></div>
-  <p class="muted" style="margin-top:16px">Reduce Motion: slides become fades, loops hold still, charts are drawn at once, the recording clock’s colon stops blinking.</p>
+  <p class="muted" style="margin-top:16px">Reduce Motion: fades instead of slides, no loops, charts drawn at once.</p>
 </section>
 
 <section id="icons">
   <h2>Icons</h2>
-  <p class="muted">Material Symbols (Material 3), Outlined, weight 400, through the <code>Icon</code> component only. <code>_fill</code> names are the filled variant for selected states. ${icons.length} in use. The native tab bar uses SF Symbols on iOS (<code>house</code>, <code>waveform</code>) and Material on Android.</p>
+  <p class="muted">Material Symbols, Outlined, weight 400, via <code>Icon</code>. <code>_fill</code> is the selected state. ${icons.length} in use. Tab bar: SF Symbols on iOS, Material on Android.</p>
   <div class="icons">${icons.map((i) => `<div class="icon"><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="${i.d}"/></svg><code>${i.name}</code></div>`).join('')}</div>
 </section>
 
@@ -366,13 +433,13 @@ const html = `<!doctype html>
     <div class="logo-tile" style="background:linear-gradient(180deg,#0B1020,#1C3470 50%,#225ED8);color:#fff"><div style="width:110px">${logo('airese-logo.svg')}</div></div>
     <div class="logo-tile" style="background:var(--midnight);border:1px solid var(--line);color:var(--mist)"><div style="width:240px">${logo('airese-logo-hori.svg')}</div></div>
   </div>
-  <p class="muted" style="margin-top:12px">Stacked logo in Moon, white on the splash gradient, and Mist in quiet footers (44–52 pt wide, with “Powered by The Air Station”). The horizontal logo isn’t used in the app yet. Files: <a href="${REPO}/assets/brand/airese-logo.svg">airese-logo.svg</a>, <a href="${REPO}/assets/brand/airese-logo-hori.svg">airese-logo-hori.svg</a>.</p>
+  <p class="muted" style="margin-top:12px">Moon on dark, white on the splash gradient, Mist in footers. Horizontal logo not used yet. Files: <a href="${REPO}/assets/brand/airese-logo.svg">airese-logo.svg</a>, <a href="${REPO}/assets/brand/airese-logo-hori.svg">airese-logo-hori.svg</a>.</p>
   <h3>App icon and splash <span class="tag">placeholder</span></h3>
-  <p class="muted">These are still Expo’s default template images, not Airese artwork. They need replacing with the Airese mark before release (the animated splash screen itself already uses the real logo).</p>
+  <p class="muted">Expo template images. Replace before release.</p>
   <div class="images">
-    <figure><img src="img/icon.png" alt="App icon (Expo placeholder)"><figcaption>App icon · placeholder</figcaption></figure>
-    <figure><img src="img/android-icon-foreground.png" alt="Android adaptive icon (Expo placeholder)" style="background:#2E3A5A"><figcaption>Android adaptive icon on Airese navy #2E3A5A · placeholder</figcaption></figure>
-    <figure><img src="img/splash-icon.png" alt="Splash icon (Expo placeholder)"><figcaption>Splash icon · placeholder</figcaption></figure>
+    <figure><img src="img/icon.png" alt="App icon (Expo placeholder)"><figcaption>App icon</figcaption></figure>
+    <figure><img src="img/android-icon-foreground.png" alt="Android adaptive icon (Expo placeholder)" style="background:#2E3A5A"><figcaption>Android icon on #2E3A5A</figcaption></figure>
+    <figure><img src="img/splash-icon.png" alt="Splash icon (Expo placeholder)"><figcaption>Splash icon</figcaption></figure>
   </div>
   <h3>Illustrations</h3>
   <div class="images">
@@ -382,20 +449,19 @@ const html = `<!doctype html>
     <figure><img src="img/microphone.png" alt="" loading="lazy"><figcaption>Microphone permission</figcaption></figure>
     <figure><img src="img/notifications.png" alt="" loading="lazy"><figcaption>Notifications permission</figcaption></figure>
   </div>
-  <p class="muted" style="margin-top:12px">Imagery: black and white, deep blue, real. People asleep in a dim room, toned blue, with an occasional warm bedside lamp. No stock-photo cheer, no sci-fi glow.</p>
   <h3>Fonts</h3>
-  <p>Montserrat 400, 500, 600, 700 via <code>@expo-google-fonts/montserrat</code>; only 400 and 600 are used by the type scale.</p>
+  <p>Montserrat via <code>@expo-google-fonts/montserrat</code> and Inter via <code>@expo-google-fonts/inter</code>, 400 and 600 of each.</p>
 </section>
 
 <section id="components">
   <h2>Components</h2>
-  <p class="muted">${components.reduce((n, g) => n + g.items.length, 0)} React Native components in <code>src/components/</code>, imported from <code>'../components'</code>. Open one for how it behaves (from its doc comment) and where it’s used.</p>
+  <p class="muted">${components.reduce((n, g) => n + g.items.length, 0)} components in <code>src/components/</code>. Open one for details and where it’s used.</p>
   ${components
     .map(
       (g) => `<div class="comp-group"><h3>${g.group}</h3><div class="comps">${g.items
         .map(
           (c) => `<details class="comp"><summary><b>${c.name}${c.used.length ? '' : '<span class="tag">not used</span>'}</b><span>${c.used.length ? esc(c.used.slice(0, 3).join(', ')) + (c.used.length > 3 ? ` +${c.used.length - 3}` : '') : ''}</span></summary>
-          <pre>${esc(c.doc || '—')}</pre>
+          <p class="blurb">${esc(c.doc || '—')}</p>
           <div class="meta">Used in: ${c.used.length ? esc(c.used.join(', ')) : 'nothing yet'}<br><a href="${REPO}/${c.path}">${c.path}</a></div></details>`,
         )
         .join('')}</div></div>`,
@@ -406,28 +472,28 @@ const html = `<!doctype html>
 <section id="patterns">
   <h2>Patterns</h2>
   <div class="scroll"><table><tbody>
-    <tr><td>Levels of detail</td><td>The page → a small explanation sheet for “why?” → a large sheet for “more” on a card. Dismissing returns to exactly where the user was.</td></tr>
-    <tr><td>Pages from a row</td><td><code>DetailPage</code>: the system push on device; slides itself in on web. Back names where it goes.</td></tr>
-    <tr><td>Grouped settings</td><td><code>FormGroup</code> cards holding inputs, rows or switches, separated by hairlines.</td></tr>
-    <tr><td>Edit with a draft</td><td>Edits are local until Save (sticky footer); Back discards them. Checked on leaving a field and again on Save.</td></tr>
-    <tr><td>Confirm, then confirm it happened</td><td>A bottom sheet naming what will happen and the action, with Cancel. Then a toast.</td></tr>
-    <tr><td>Permissions</td><td>Ask in onboarding, never a wall; ask again in context with <code>PermissionSheet</code>, which switches to “Open Settings” once the system won’t ask again.</td></tr>
-    <tr><td>Empty states</td><td>An icon, one heading, one sentence that says what to do.</td></tr>
-    <tr><td>Charts</td><td>A sentence above every chart. Legends with shapes for two or more series. A text alternative for each. Grow in once with the slow preset.</td></tr>
-    <tr><td>Numbers</td><td>One big number, no small units. Levels are words, never colour alone.</td></tr>
-    <tr><td>Brand presence</td><td>Quiet: the logo in Mist with “Powered by The Air Station” at the end of Profile and Our centres, and under the next-step button on Recording Details.</td></tr>
+    <tr><td>Levels of detail</td><td>Page → small sheet for “why?” → large sheet for “more”.</td></tr>
+    <tr><td>Pages from a row</td><td><code>DetailPage</code>. Back names where it goes.</td></tr>
+    <tr><td>Grouped settings</td><td><code>FormGroup</code> with inputs, rows or switches.</td></tr>
+    <tr><td>Editing</td><td>Changes save on Save; Back discards them.</td></tr>
+    <tr><td>Destructive actions</td><td>Confirm in a sheet, then a toast.</td></tr>
+    <tr><td>Permissions</td><td>Ask in onboarding; ask again in context with <code>PermissionSheet</code>.</td></tr>
+    <tr><td>Empty states</td><td>Icon, heading, one sentence on what to do.</td></tr>
+    <tr><td>Charts</td><td>A sentence above each chart. Shapes in legends. A text alternative.</td></tr>
+    <tr><td>Numbers</td><td>No small units. Levels are words, not colour alone.</td></tr>
+    <tr><td>Brand</td><td>Logo in Mist with “Powered by The Air Station” at the end of Profile and Our centres.</td></tr>
   </tbody></table></div>
 </section>
 
 <section id="a11y">
   <h2>Accessibility</h2>
   <div class="rules">
-    <div class="rule"><b>Contrast</b>7:1 for text. Moon and Mist pass on Midnight and Deep; Midnight on Breath is 9.4:1. Data marks 3:1.</div>
+    <div class="rule"><b>Contrast</b>7:1 for text, 3:1 for data marks.</div>
     <div class="rule"><b>Targets</b>44 pt minimum for every control.</div>
-    <div class="rule"><b>Text size</b>Nothing under 12 pt; scales to 200%.</div>
-    <div class="rule"><b>Not colour alone</b>Words for levels, shapes for chart events, legends.</div>
-    <div class="rule"><b>Gestures</b>Every gesture has a one-finger alternative (zoom buttons for pinch). Charts are adjustable for screen readers.</div>
-    <div class="rule"><b>Motion</b>Reduce Motion respected everywhere.</div>
+    <div class="rule"><b>Text size</b>12 pt minimum; scales to 200%.</div>
+    <div class="rule"><b>Not colour alone</b>Words for levels, shapes for chart events.</div>
+    <div class="rule"><b>Gestures</b>One-finger alternative for every gesture.</div>
+    <div class="rule"><b>Motion</b>Reduce Motion respected.</div>
   </div>
 </section>
 

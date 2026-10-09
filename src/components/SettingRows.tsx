@@ -2,7 +2,7 @@ import React from 'react';
 import { Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 import { AppText } from './AppText';
 import { Icon, type IconName } from './Icon';
-import { colors, radius, space } from '../theme';
+import { alpha, colors, radius, space } from '../theme';
 
 /**
  * Rows for the Profile pages, inside a FormGroup card (the iOS Settings pattern).
@@ -76,9 +76,9 @@ export function SettingSwitch({ title, value, enabled = true, onChange }: { titl
         disabled={!enabled}
         onValueChange={onChange}
         accessibilityLabel={title}
-        trackColor={{ false: 'rgba(179, 189, 211, 0.3)', true: colors.accent }}
+        trackColor={{ false: alpha(colors.mist, 0.3), true: colors.accent }}
         thumbColor={colors.white}
-        ios_backgroundColor="rgba(179, 189, 211, 0.3)"
+        ios_backgroundColor={alpha(colors.mist, 0.3)}
         {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.white } as object) : null)}
       />
     </View>

@@ -1,13 +1,12 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { eraseEverything } from '../lib/account';
 import { ProfileScreen } from '../screens/ProfileScreen';
 
-/** ?from=recordings: opened from the Recordings tab, so Back says so. */
+/** Opened from the avatar on Home. */
 export default function Profile() {
-  const { from } = useLocalSearchParams<{ from?: string }>();
   return (
     <ProfileScreen
-      backLabel={from === 'recordings' ? 'Recordings' : 'Home'}
+      backLabel="Home"
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/home'))}
       onOpenDetails={() => router.push('/profile-details')}
       onOpenNotifications={() => router.push('/profile-notifications')}

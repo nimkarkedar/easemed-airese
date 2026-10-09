@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { AppText, BottomSheet, Button, ChipGroup, DetailPage, Icon, PAGE_SIDE, ToggleChip } from '../components';
+import { AppText, BottomSheet, Button, ChipGroup, DetailPage, FormTitle, Icon, PAGE_SIDE, ToggleChip } from '../components';
 import { NOTE_GROUPS, REMEDY_GROUPS, clearNightNotes, isRemedy, labelOf, ordered, saveTonight, summarize, useNightNotes, type NoteGroup } from '../lib/nightNotes';
-import { colors, radius, space, type } from '../theme';
+import { alpha, colors, radius, space, type } from '../theme';
 
 /**
  * Night Notes: a short check-in before recording (about 15 seconds), opened from Home.
@@ -12,7 +12,7 @@ import { colors, radius, space, type } from '../theme';
  *
  * Same template as a night's details (DetailPage): "‹ Home", large title, sticky header.
  */
-export function NightNotesScreen({ onClose, slideIn = Platform.OS === 'web' }: { onClose: () => void; slideIn?: boolean }) {
+export function NightNotesScreen({ onClose, slideIn = Platform.OS === 'web', backLabel = 'Home' }: { onClose: () => void; slideIn?: boolean; /** Where Back goes: Home, or Recording when opened from its tips. */ backLabel?: string }) {
   const { height } = useWindowDimensions();
   const { tonight, lastNight } = useNightNotes();
   const [draft, setDraft] = useState<string[]>(tonight);
@@ -26,7 +26,7 @@ export function NightNotesScreen({ onClose, slideIn = Platform.OS === 'web' }: {
   return (
     <>
       <DetailPage
-        backLabel="Home"
+        backLabel={backLabel}
         title="Night Notes"
         subtitle="Add what may affect your sleep."
         onBack={onClose}
@@ -127,9 +127,7 @@ export function NightNotesScreen({ onClose, slideIn = Platform.OS === 'web' }: {
         <ScrollView style={{ maxHeight: height * 0.5, marginTop: space.lg }} showsVerticalScrollIndicator={false}>
           {REMEDY_GROUPS.map((group, i) => (
             <View key={group.title} style={{ marginTop: i ? space.xl : 0 }}>
-              <AppText variant="caption" color="textMuted" accessibilityRole="header" style={styles.groupTitle}>
-                {group.title}
-              </AppText>
+              <FormTitle title={group.title} />
               <ChipGroup>
                 {group.options.map((x) => (
                   <ToggleChip key={x.id} label={x.label} selected={draft.includes(x.id)} onToggle={() => toggle(x.id)} />
@@ -173,7 +171,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.surface, // Deep
   },
-  shortcutIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(157, 180, 255, 0.14)' },
+  shortcutIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: alpha(colors.breath, 0.14) },
   shortcutAction: {
     minHeight: 36,
     flexDirection: 'row',
@@ -198,5 +196,4 @@ const styles = StyleSheet.create({
   },
   medium: { fontFamily: type.button.fontFamily, fontWeight: type.button.fontWeight },
   center: { textAlign: 'center' },
-  groupTitle: { textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: space.sm },
 });

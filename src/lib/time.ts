@@ -11,7 +11,7 @@ export function fromMinutes(minutes: number): ClockTime {
 }
 
 /** Recording runs until you stop it; this is the safety net if you forget (battery, storage). */
-export const MAX_RECORDING_MINUTES = 12 * 60;
+export const MAX_RECORDING_MINUTES = 8 * 60;
 
 /** Whole minutes since `from`. */
 export const minutesSince = (from: Date, now = new Date()) => Math.max(0, Math.floor((now.getTime() - from.getTime()) / 60_000));

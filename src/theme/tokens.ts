@@ -2,7 +2,7 @@
  * Airese design tokens (kept minimal: add only when a screen needs it).
  * Source: docs/BRAND.md (Voice & Tone and Visual Language decks, Oct 2026).
  *  - Night-appropriate dark UI, with one warm light. Red only for form errors, never for sleep data.
- *  - Montserrat: semibold to scan (headings), medium to act (buttons), regular to read.
+ *  - Montserrat for titles and buttons; Inter for everything you read (body, small, caption, inputs).
  */
 import { Platform, type TextStyle } from 'react-native';
 
@@ -13,28 +13,40 @@ const palette = {
   deep: '#19294E', // cards, sheets (deck had #131B2E; updated by design, Oct 2026)
   mist: '#B3BDD3', // muted text (deck had #93A0BB; lightened to pass WCAG AAA 7:1 on Midnight and Deep)
   moon: '#EEF1F7', // text
-  breath: '#9DB4FF', // cool accent: breathing, links
+  breath: '#9DB4FF', // accent: buttons, links
   lamp: '#F4B65F', // the one warm light; use sparingly
   // Data only (charts, data icons; never text, buttons or links). Added Oct 2026 for Recording Details.
   ember: '#FFAA5C', // snoring
-  iris: '#B9A3FF', // breathing interruptions
+  iris: '#B9A3FF', // breathing pauses
   dew: '#8EE3CF', // sleep and rest
+  flare: '#FF5A4F', // the one red: loudest snoring in charts, and form-error marks (added Oct 2026; never UI chrome)
 } as const;
+
+/**
+ * A palette colour at an opacity: alpha(colors.moon, 0.24). Use this for every see-through tint,
+ * hairline and wash, so all colour still comes from the palette.
+ */
+export function alpha(hex: string, opacity: number) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${opacity})`;
+}
 
 export const colors = {
   ...palette,
   // Roles: screens use these
   background: palette.midnight,
   surface: palette.deep, // cards, sheets, form groups
-  divider: 'rgba(179, 189, 211, 0.18)', // hairlines between form rows (Mist at 18%)
+  divider: alpha(palette.mist, 0.18), // hairlines between form rows (Mist at 18%)
   text: palette.moon,
   textMuted: palette.mist,
   accent: palette.breath, // primary buttons, links
   onAccent: palette.midnight, // text on accent (white on Breath is too low-contrast)
-  error: '#FFB4AB', // form errors only (Material 3 dark error, tone 80). Never for sleep results: calm, not alarming
+  error: '#FFA49B', // form-error text: a light tint of Flare (7.5:1 on Deep, 10:1 on Midnight; AAA)
+  errorMark: palette.flare, // form-error ring and icon (not text: 4.6:1 on Deep, past the 3:1 for marks)
+  urgentAction: '#FF7F72', // the one care action on a repeated pattern (Book a call): Flare lightened; Midnight label 7.7:1 (AAA), 5.3:1 against the wine card
   brand: '#2E3A5A', // Airese navy (logo, decks). Role in the dark UI still open: see BRAND.md §5
   white: '#FFFFFF', // logo on the splash gradient
-  scrim: 'rgba(5, 7, 15, 0.7)', // Night at 70%: dims the screen behind sheets
+  scrim: alpha(palette.night, 0.7), // Night at 70%: dims the screen behind sheets
 
   // Data: one colour per kind of thing, the same everywhere (charts, data icons, legends, score rings).
   // Checked together on Deep and Midnight with the dataviz validator: colour-blind dE 12+, 3:1+ contrast.
@@ -44,10 +56,11 @@ export const colors = {
   dataBreathing: palette.iris,
   dataSleep: palette.dew,
   // Soft tints of the same, for icon badges. Decorative: text on them uses Moon.
-  tintSnoring: 'rgba(255, 170, 92, 0.14)',
-  tintBreathing: 'rgba(185, 163, 255, 0.14)',
-  tintSleep: 'rgba(142, 227, 207, 0.12)',
-  tintWarm: 'rgba(244, 182, 95, 0.10)', // Lamp wash, for the meaning card
+  tintSnoring: alpha(palette.ember, 0.14),
+  tintBreathing: alpha(palette.iris, 0.14),
+  tintSleep: alpha(palette.dew, 0.12),
+  tintWarm: alpha(palette.lamp, 0.10), // Lamp wash, for the meaning card
+  tintAccent: alpha(palette.breath, 0.16), // Breath wash: icon badges on profile tiles, the selected gender tile
 } as const;
 
 /** Gradient stops, top to bottom. */
@@ -65,12 +78,26 @@ export const gradients = {
     { offset: 0, color: '#1C3470' },
     { offset: 1, color: palette.deep },
   ],
+  // Hero card, unusual night: a subtle warm dusk over Deep (Lamp glow). Moon text 12:1.
+  heroWatch: [
+    { offset: 0, color: '#3D2E3C' },
+    { offset: 1, color: palette.deep },
+  ],
+  // Hero card, repeated pattern: wine into plum (Flare glow). Moon text 11.4:1+.
+  heroUrgent: [
+    { offset: 0, color: '#5A1C24' },
+    { offset: 1, color: '#2E1830' },
+  ],
 } as const;
 
 export type ColorName = keyof typeof colors;
 
-/** Snoring loudness: one hue (Ember), light to deep. Magnitude, so never a rainbow, and no red. */
-export const loudness = { light: '#FFD9B0', moderate: '#FFC285', loud: '#FFAA5C', veryLoud: '#F28B3D' } as const;
+/**
+ * Snoring loudness, one colour per level (the `Intensity` keys): cyan, yellow, orange, Flare red.
+ * Charts and graphs only (fills, bars, legends), never text, buttons or UI chrome. The snoring chart
+ * pins each colour to its level's decibels, so only truly loud snoring reaches red.
+ */
+export const loudness = { light: '#2EC9EA', moderate: '#FFD84A', loud: '#FF9A3C', veryLoud: palette.flare } as const;
 
 /** 4-pt grid */
 export const space = {
@@ -92,33 +119,34 @@ export const radius = {
   sheet: 28, // bottom sheet corners
 } as const;
 
-/* One loaded font file per weight (see src/app/_layout.tsx).
-   On web, plain "Montserrat" is the fallback used by the shared preview link. */
-type Weight = '400' | '500' | '600' | '700';
-const nativeFamily: Record<Weight, string> = {
-  '400': 'Montserrat_400Regular',
-  '500': 'Montserrat_500Medium',
-  '600': 'Montserrat_600SemiBold',
-  '700': 'Montserrat_700Bold',
+/* One loaded font file per family and weight (see src/app/_layout.tsx).
+   On web, plain "Montserrat" / "Inter" (Google Fonts) are the fallbacks used by the shared preview link. */
+type Weight = '400' | '600';
+type Family = 'Montserrat' | 'Inter';
+const nativeFamily: Record<Family, Record<Weight, string>> = {
+  Montserrat: { '400': 'Montserrat_400Regular', '600': 'Montserrat_600SemiBold' },
+  Inter: { '400': 'Inter_400Regular', '600': 'Inter_600SemiBold' },
 };
-const font = (w: Weight): TextStyle =>
+const font = (family: Family, w: Weight): TextStyle =>
   Platform.OS === 'web'
-    ? { fontFamily: `${nativeFamily[w]}, Montserrat, system-ui, sans-serif`, fontWeight: w }
-    : { fontFamily: nativeFamily[w] };
+    ? { fontFamily: `${nativeFamily[family][w]}, ${family}, system-ui, sans-serif`, fontWeight: w }
+    : { fontFamily: nativeFamily[family][w] };
 
 /**
- * Type scale. Base 16; steps of about 1.25 (major third), rounded to whole sizes,
+ * Type scale. Titles (title, headline, heading) and buttons in Montserrat; reading text in Inter.
+ * Base 16; steps of about 1.25 (major third), rounded to whole sizes,
  * Reading text has line height of at least 1.5x (WCAG 1.4.8). Nothing smaller than 12: text is read half-asleep at 6 am.
  *   12 · 14 · 16 · 20 · 24 · 32
  */
 export const type = {
-  title: { ...font('600'), fontSize: 32, lineHeight: 40 }, // rare: big single statements
-  headline: { ...font('600'), fontSize: 24, lineHeight: 32 }, // screen headline (onboarding)
-  heading: { ...font('600'), fontSize: 20, lineHeight: 28 }, // section and sheet titles
-  body: { ...font('400'), fontSize: 16, lineHeight: 24 }, // base: all reading text
-  small: { ...font('400'), fontSize: 14, lineHeight: 22 }, // secondary detail
-  caption: { ...font('400'), fontSize: 12, lineHeight: 18 }, // the minimum: credits, fine print
-  button: { ...font('400'), fontSize: 16, lineHeight: 20 }, // regular (Oct 2026: two weights only, regular and semibold)
+  title: { ...font('Montserrat', '600'), fontSize: 32, lineHeight: 40 }, // rare: big single statements
+  headline: { ...font('Montserrat', '600'), fontSize: 24, lineHeight: 32 }, // screen headline (onboarding)
+  heading: { ...font('Montserrat', '600'), fontSize: 20, lineHeight: 28 }, // section and sheet titles
+  body: { ...font('Inter', '400'), fontSize: 16, lineHeight: 24 }, // base: all reading text
+  small: { ...font('Inter', '400'), fontSize: 14, lineHeight: 22 }, // secondary detail
+  caption: { ...font('Inter', '400'), fontSize: 12, lineHeight: 18 }, // the minimum: credits, fine print
+  button: { ...font('Montserrat', '400'), fontSize: 16, lineHeight: 20 }, // regular (Oct 2026: two weights only, regular and semibold)
+  buttonSmall: { ...font('Montserrat', '400'), fontSize: 14, lineHeight: 18 }, // mini buttons in banners and cards
 } satisfies Record<string, TextStyle>;
 
 export type TypeVariant = keyof typeof type;

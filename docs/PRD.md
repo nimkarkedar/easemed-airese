@@ -31,7 +31,7 @@ When this document and the code disagree, raise it: either the code has a bug or
    - 5.6 [Night Notes](#56-night-notes)
    - 5.7 [Recording](#57-recording)
    - 5.8 [Recording Details](#58-recording-details)
-   - 5.9 [Recordings](#59-recordings)
+   - 5.9 [Reports](#59-reports)
    - 5.10 [Profile](#510-profile)
    - 5.11 [Notifications](#511-notifications)
 6. [Measures and how they're calculated](#6-measures-and-how-theyre-calculated)
@@ -75,7 +75,7 @@ Full detail in [BRAND.md](BRAND.md). The ones that shape requirements:
 - **One headline first, detail on tap.** Three levels: glance (everyone), explore (engaged users), report (the curious and doctors).
 - **Plain, factual, calm, useful.** Say what was heard, never diagnose, never compare with other people.
 - **Compare with yourself.** "Usual" means the user's own recent nights.
-- **Private by design.** Sound is analysed on the phone; recordings stay on the device.
+- **Private by default.** Sound is analysed on the phone; recordings stay on it.
 - **Claim only what's validated.** No number appears unless Engineering and Clinical stand behind it.
 
 ---
@@ -84,7 +84,7 @@ Full detail in [BRAND.md](BRAND.md). The ones that shape requirements:
 
 ### In the prototype
 
-Splash, onboarding walkthrough, microphone and notification permissions, your details, Home (tips, Night Notes, record button), the Recording screen, Recording Details (six states), the Recordings list, Profile (details, notifications, sleep care, centres, about, your data).
+Splash, onboarding walkthrough, microphone and notification permissions, your details, Home (banner, record button), Night Notes, the Recording screen, Reports (Recording Details in six states, and the calendar), Profile (details, notifications, sleep care, centres, about, your data).
 
 ### Not yet built
 
@@ -106,20 +106,20 @@ Splash, onboarding walkthrough, microphone and notification permissions, your de
 ```
 Splash ─► Onboarding walkthrough ─► Microphone ─► Notifications ─► Your details ─► Home
                                                                                    │
-  Tabs: Home ◄────────────────────────────────────────────────────────────► Recordings
-   │                                                                         │
-   ├─ Night Notes (push)                                                     ├─ Recording Details (push)
-   ├─ Record button ─► Recording (full screen) ─► stop ─► Recording Details  │    └─ sheets: scores, snoring,
-   └─ Avatar ─► Profile (push)                                               │       breathing, sleep, clips,
-                 ├─ Your details (push)                                      │       recent nights, night report
-                 ├─ Notifications (push)                                     └─ Avatar ─► Profile
+  Tabs: Home ◄──────────────────────────────────────────────────────────────► Reports
+   │                                                                          │
+   ├─ Night Notes (push)                                                      ├─ Last night's report (Recording Details)
+   ├─ Record button ─► Recording (full screen) ─► stop ─► Reports              │    └─ sheets: scores, snoring, breathing,
+   └─ Avatar ─► Profile (push)                                                │       sleep, clips, recent nights, night report
+                 ├─ Your details (push)                                       └─ Calendar (top sheet) ─► another night's report
+                 ├─ Notifications (push)
                  └─ Our centres (push)
 ```
 
-- **Tabs:** Home and Recordings, in a floating tab bar.
-- **Pages opened from a row** (Recording Details, Night Notes, Profile and its pages) use the system push on device (slide in, swipe back). The browser preview slides them in itself.
-- **Back** names where it goes ("‹ Home", "‹ Recordings", "‹ Profile").
-- **Sheets** (bottom sheets and large sheets) hold explanations, confirmations and "more" for a card. They close with a tap outside, a drag down, the × button, or Android back.
+- **Tabs:** Home and Reports, in a floating tab bar.
+- **Pages opened from a row** (Night Notes, Profile and its pages) use the system push on device (slide in, swipe back). The browser preview slides them in itself.
+- **Back** names where it goes ("‹ Home", "‹ Recording", "‹ Profile"). Reports has no back: it is a tab.
+- **Sheets** (bottom sheets, large sheets, and the Reports calendar's top sheet) hold explanations, confirmations and "more" for a card. They close with a tap outside, a drag down, the × button, or Android back.
 - **Recording** is a full-screen takeover with no swipe-back, so a half-asleep gesture can't end the night.
 
 ---
@@ -134,13 +134,15 @@ Splash ─► Onboarding walkthrough ─► Microphone ─► Notifications ─�
 
 ### 5.2 Onboarding walkthrough
 
-Three slides, each with an illustration, a headline, two lines of body and an (i) for more in a sheet.
+Three slides, each with an illustration, a headline, one line of body and an (i) for more in a sheet.
 
 | # | Headline | Body |
 | --- | --- | --- |
-| 1 | Know your sleep. | Track how you sleep. See the patterns. |
-| 2 | Completely private. | Your data stays on your device. Everything is stored locally. |
-| 3 | Get actionable insights | Understand your sleeping behaviour. Seek care as required. |
+| 1 | Let's find out what happens while you sleep. | Your phone does the work. No watch, ring or mat. |
+| 2 | Private by default. | Your recordings stay on your phone. |
+| 3 | A clearer next step. | Know when to watch, when to share, and when to get checked. |
+
+Each (i) adds one or two plain sentences (how a night is recorded; nothing leaves the phone unless shared; Airese only suggests a doctor when the same thing shows up night after night). The slides follow BRAND.md's four promises.
 
 - **Next** moves through the slides; **Continue** fades in on the last.
 - **Skip** sits below the status bar, top right.
@@ -151,14 +153,14 @@ Two screens in onboarding, then a second chance in context whenever a permission
 
 #### Microphone
 
-- **Onboarding screen:** "Let Airese listen while you sleep." / "Allow microphone access to capture snoring and breathing. Recordings stay private on your device unless you choose to share them." Button: **Allow microphone**.
-- **System prompt text (iOS):** "Airese listens while you sleep to capture snoring and breathing. Recordings stay on your device unless you choose to share them."
-- **If off:** Home pins "Microphone is off. Airese needs it to record your night." with **Turn on**. Tapping the record button also asks, then starts recording once allowed. Profile → Settings shows the status with **Turn on**.
+- **Onboarding screen:** "Let Airese listen while you sleep." / "Airese listens all night for snoring and breathing. Your recordings stay on your phone. Private and safe." Button: **Allow microphone**.
+- **System prompt text (iOS):** "Airese listens all night for snoring and breathing. Your recordings stay on your phone unless you choose to share them."
+- **If off:** the Home banner shows "Airese needs your microphone to record your night." with **Turn on microphone** (section 5.5). Tapping the record button also asks, then starts recording once allowed. Profile → Settings shows the status with **Turn on**.
 
 #### Notifications
 
-- **Onboarding screen:** "Turn on notifications." / "We'll remind you to start recording, and let you know when it stops. Just two notifications a day."
-- **If off:** a tip on Home ("Turn on notifications for a bedtime reminder.") and Profile → Notifications show **Turn on**.
+- **Onboarding screen:** "Turn on notifications." / "A reminder at bedtime, and a note when your night is ready. Choose which in Profile."
+- **If off:** the Home banner ("Turn on notifications to know when your night is ready.") and Profile → Notifications show **Turn on**.
 
 #### The second-chance sheet
 
@@ -171,20 +173,26 @@ Its message depends on where the permission stands:
 
 Coming back from Settings with the permission on continues automatically.
 
-> **To confirm:** the notification copy says "two a day" (a reminder to start, a note when it stops). The product now has three optional notifications and no automatic stop note (section 5.11). Rewrite the onboarding and sheet copy to match.
 
 ### 5.4 Your details (onboarding)
 
-The last onboarding step: "Great! One last thing…"
+The last onboarding step: "Great! One last thing…" It's one short screen, not a multi-step form. Only name, phone and email are typed. Everything else is a tile that opens a small sheet built for that one question, and the tile then shows the answer.
 
 | Field | Rules |
 | --- | --- |
-| First name, last name | Optional. Words capitalised. |
-| Year of birth | One four-digit input (no wheels). 1900 to this year. Errors: "Use four digits, like 1985." / "That year doesn't look right. Check it and try again." (i) explains why it's asked. |
-| Email | Optional. Checked on leaving the field: "Check your email address." Footer: "Verify to get your report" with a **Verify** link (flow to design). |
+| First name, last name | **First name required** ("Add your first name."). Words capitalised. |
+| Phone | **Required.** A flag and country-code chip (Singapore and Malaysia pinned first, then a searchable list), then the number, formatted as you type (SG "9123 4567", MY "12-345 6789"). Pasting a full "+60…" number picks the country. Errors: "Add your phone number." / "Check your phone number." (i) explains: "So the sleep care team can call you, when you ask them to. It stays on this phone until then." |
+| Email | Optional, no verification. Checked on leaving the field: "Check your email address." |
+| About you (optional) | Tiles. (i) explains: "It helps a doctor read your report better, if you choose to consult one. All of it is optional." |
+| · Gender | Three icon tiles (Male, Female, Transgender), plus a quieter "Prefer not to say". Tapping one saves it and closes the sheet. |
+| · Age | A year-of-birth wheel that shows "40 years old" as it turns. Line under the title: "Sleep and breathing change with age." The year is stored, because an age goes out of date. The tile shows the age. |
+| · Height, weight | A ruler you drag, with − / + buttons and a number you can type. cm / ft·in and kg / lb switch; centimetres and kilograms by default. Line under the title: "With your weight (height), this gives your BMI. It helps us find insights relevant to you." Always stored in metric. |
+| · Where you live | Singapore: one tap. Malaysia: pick one of the 16 states and federal territories, then type your town or city. Elsewhere: free text. The phone's country is suggested first. |
+| Terms | **Required.** A checkbox above the button: "I agree to the Terms and Conditions and Privacy Policy." Both are links that open an in-app page (a placeholder for now). If it isn't ticked: "Tick the box to agree before you begin." The button stays enabled. |
 
 - Native grouped form (iOS Settings style).
 - Errors outline the group in the error colour and show an icon with the message.
+- Anything skipped can be added later in Profile → Your details, which uses the same fields and sheets.
 
 ### 5.5 Home
 
@@ -193,27 +201,29 @@ The bedtime screen. One job: start a night's recording.
 **Layout, back to front:**
 
 1. A night-to-blue gradient with a slow, faint drift of light.
-2. **The tip sheet** behind the panel. The charging tip is always in view; pull the panel down (or tap the grabber) to see more.
-3. **The panel**, which holds Night Notes and the record button.
+2. **The banner** (Breath): one message at a time, with its action as a mini button under the text.
+3. **The panel**, which holds the record button.
 
 **Header:** "Home" and the avatar (initials, or a person icon). The avatar opens Profile.
 
-**Tips** (plain, factual; a few at random each visit):
+**Banner messages** (four for launch; the first that applies shows, and a new one fades in):
 
-- Keep your phone on charge tonight. Sleep tracking can use more battery than usual. *(always first)*
-- Put your phone on your bedside table, close to your pillow.
-- Sharing a bed? Keep your phone on your side for the clearest recording.
-- Turn on Do Not Disturb. Calls and alerts stay quiet, and Airese keeps recording.
-- Updates, only when true: "Your breathing was steadier last night than your usual." / "2:14 am. 40 seconds. Have a listen…"
-- Permission tips (section 5.3) when one is off, with **Turn on**.
+| Priority | When | Message | Action |
+| --- | --- | --- | --- |
+| P0 | Microphone off | "Airese needs your microphone to record your night." | **Turn on microphone** (permission sheet) |
+| P1 | Notifications off | "Turn on notifications to know when your night is ready." | **Turn on notifications** |
+| P2 | Not dismissed yet | "Keep your phone on charge while you record. A night of listening uses more battery." | **Got it** (hides it) |
+| P3 | Otherwise | "Add Night Notes before you sleep, so you can track your progress over time." Once added: "Tonight's Night Notes: Blocked nose · Alcohol" | **Add Night Notes** / **Edit Night Notes** |
 
-**Night Notes row:** shows tonight's notes, or "Add sleep context". After the first night, a gentle caution mark appears while tonight's notes are empty.
+P3 is always there underneath, so it's also Home's way into Night Notes (there's no separate Night Notes row).
+
+> **Engineering:** P2 could also hide while the phone is already on charge (expo-battery), and come back each evening rather than once.
 
 **Record button:**
 
 - **Tap to start.** The ring of ticks lights up quickly, then recording begins and the screen fills with blue from the button.
 - **At rest:** the button breathes very gently, and now and then a light runs round the ring.
-- **Under it:** "Tap to start recording" / "Completely private. Recorded on your phone."
+- **Under it:** "Tap to start recording", and a quiet pill with a lock: "Private. Recordings stay on this phone."
 - **No stop time to set.** Recording runs until the user stops it (section 5.7).
 
 ### 5.6 Night Notes
@@ -242,29 +252,31 @@ The full rule set and its reasons are in [RECORDING.md](RECORDING.md).
 | Start | Tap the record button on Home. |
 | Stop | Tap the stop button, then confirm: "Stop recording?" / "Airese will look through your night." **Stop recording** · **Keep recording**. |
 | After stopping | Straight to Recording Details: "Looking through your night", then the results. |
-| Safety net | Stops by itself after **12 hours** (battery and storage). |
+| Safety net | Stops by itself after **8 hours** (battery and storage). |
 | Scheduled start | None: iOS and Android 14+ don't allow switching the microphone on from the background. |
 | Alarm | None. Airese doesn't wake anyone. |
 
 **The Recording Sleep screen:**
 
-- **Title:** "Recording Sleep", then "Private and smart listening." with an (i) for how recording works *(content to come)*.
-- **Banner** (can be closed): "Keep Airese open while you sleep. You can lock your phone now."
-- **Listening ring:** moves with the sound around the stop button.
+- **Title:** "Recording…", then "Listening privately, on this phone." with an (i): "How recording works" / "Airese listens through your phone's microphone, even with the screen locked. It keeps short moments of snoring and breathing, and works out your night on this phone. Nothing leaves it unless you choose to share."
+- **Tips carousel**: a very light frosted box with a soft shadow, one short line at a time (swipe, or tap the dashes):
+  1. "Keep Airese open. Just lock your phone." (the point: don't switch to another app or close Airese)
+  2. "Keep your phone on charge."
+  3. "No Night Notes yet tonight." with **Add** (opens Night Notes). Once added: "Night Notes added for tonight."
+- **Listening ring:** moves with the sound around the stop button, with "Tap to stop recording" right under it.
+- **Type:** the title, then one style for everything else (Inter 16 regular). Moon for the tips and the safety stop; Mist for the subtitle. No elapsed timer.
 - **Bottom:**
-  - **Recording for 02:14**: hours and minutes, with the colon blinking once a second (steady with Reduce Motion).
-  - An outlined pill: **Stops by itself after 12 hours**. Screen readers hear the exact time.
-  - "Tap to stop when you wake up".
+  - An outlined pill: **Stops by itself after 8 hours**. Screen readers hear the exact time.
 
-> **To confirm (Engineering):** recording must survive a locked screen and Do Not Disturb, and the 12-hour cap must be checked against battery and storage measurements.
+> **To confirm (Engineering):** recording must survive a locked screen and Do Not Disturb, and the 8-hour cap must be checked against battery and storage measurements.
 
 ### 5.8 Recording Details
 
-The most important screen: one night's results. Opened after stopping a recording, or from the Recordings list.
+The most important screen: one night's results. It is the Reports tab's page (section 5.9): last night by default, any other night from the calendar. Stopping a recording lands here.
 
 #### Page template
 
-- **"‹ Recordings"**, the night's date as the title ("Tue, 6 Oct"), and "8 hr of recording · 11:05 pm to 7:05 am".
+- **The calendar button** top right (section 5.9), the night's date as the title ("Tue, 6 Oct"), and, on two lines, "8 hr of recording" / "11:05 pm to 7:05 am". Last night (the night that started yesterday) also has a small Breath **Last night** tag at the end of the first line; other nights have none.
 - **A sticky footer** with one next step. **Keep tracking** on ordinary nights; **Talk to a sleep care team** only for a repeated pattern (it opens a sheet: "A sleep care team from The Air Station can go through your recent nights with you and suggest what to do next. It isn't a diagnosis." with **Request a callback** · **Not now**). Under it, "Powered by The Air Station".
 
 #### States
@@ -272,7 +284,7 @@ The most important screen: one night's results. Opened after stopping a recordin
 | State | When | What the page shows |
 | --- | --- | --- |
 | Processing | Straight after stopping | "Looking through your night" / "Finding the moments worth showing you." with a soft progress shimmer. No empty cards. |
-| Couldn't hear clearly | Poor audio | "We couldn't hear enough clearly last night" / "Try placing your phone closer to your bed tonight." Privacy footer. No scores. |
+| Couldn't hear clearly | Poor audio | "We couldn't hear enough last night" / "Try your phone closer to the bed." Privacy footer. No scores. |
 | First night | No history yet | Proof first: the night in sound comes **before** the scores. No comparisons. "Your first night" note instead of recent nights. |
 | Ordinary | Close to usual | "A steadier night". Status mark: Dew check. |
 | Unusual | One night out of the ordinary | "More snoring than usual". Status mark: Lamp arrow. |
@@ -288,14 +300,16 @@ The most important screen: one night's results. Opened after stopping a recordin
 
 #### The page, top to bottom (ordinary, unusual and pattern nights)
 
-1. **The verdict card.**
-   - A status mark, a headline and a sentence, e.g. "Worth a closer look" / "You snored for 4 hr 57 min, mostly between 12 and 2 am. Your breathing was interrupted often, as on most recent nights."
-   - **Have a listen** plays the selected moment.
+1. **The verdict card.** Full-width words over the night's mood colours, with the week as a graph behind them (no dial).
+   - A headline and a sentence or two, e.g. "Worth a closer look" / "You snored for 4 hr 40 min, mostly between 3 and 5 am. Your breathing paused often on 5 of the last 7 nights."
+   - **The graph** is real data: the last seven nights of snoring, tonight at the right edge (first night: tonight hour by hour). The shape is the data's; how high it reaches follows the verdict: low and nearly flat (ordinary, Breath line), climbing to mid-card (unusual, Lamp line). **Pattern** is drawn, not plotted: a zoomed-out picture of a pattern building up, one steady climb from bottom left to top right with small wobbles (Flare line on wine). The words carry the facts. Hidden from screen readers: the words say it. On load a tiny shine draws the line from left to right (glint preset); after a long rest it glides along the finished line again, now and then. Reduce Motion: the graph is simply there, no shine.
+   - **The graph runs behind the words, within a readability budget:** behind the text, the fill (4%) and line (6 to 14%) are held so Moon body text stays at 7:1 or more at the card's brightest point (measured 9:1 or better). Below the text it fades up to full strength behind the button. The card's corner glow was softened to make room. The shine dims behind the words too.
+   - **One button,** coloured by the night: **Keep tracking** (Breath) · **Try using a remedy** (Lamp, the one warm light) · **Book a call** with a phone icon (coral `urgentAction`, the one button allowed a red tint; BRAND §4).
 2. **Two score tiles, side by side.** Each opens a sheet.
    - **Sound Score:** a big ring with the number inside (e.g. 88), a level word (Low, Moderate, High) and the trend ("More than usual", "About usual", "Less than usual").
    - **Breathing pauses:** a ring with an icon, not a number. A plain level word (Rarely, Sometimes, Often) and the trend. The exact rate per hour is only in its sheet and the night report.
 3. **Your night in sound.** The chart and the clips in one card.
-   - **Opening line,** e.g. "Louder than a conversation for 1h 30m. Mostly between 12 and 2 am."
+   - **Opening line,** e.g. "Louder than a conversation for 1 hr 30 min, mostly between 12 and 2 am."
    - **The chart:**
      - the whole night's sound level as a filled shape, against 40, 60 and 80 dB lines;
      - breathing pauses as purple marks above the plot;
@@ -310,7 +324,7 @@ The most important screen: one night's results. Opened after stopping a recordin
 5. **Your recent nights:** a bar per night for the last 7, tonight highlighted, a line for your usual, and a sentence ("About your usual 4 hr 17 min of snoring."). On a first night: "Your first night. This gives us a starting point. Record a few more nights and Airese can show you what's typical for you."
 6. **What it means.** A warm card whose message follows the ladder (section 7), with an (i) for "How Airese decides what to say".
 7. **Night report** card: "Every measure from last night, and how Airese got it. Handy to show a doctor." It previews the loudest level, pauses per hour, and time above 60 dB.
-8. **Private by design** footer: "Airese analyses your sleep sounds on your phone. Your recordings stay on your device." Link: "How Airese keeps it private".
+8. **Private by default** footer: "Your recordings stay on your phone." Link: "How Airese keeps it private".
 
 #### Sheets ("more")
 
@@ -337,38 +351,26 @@ The most important screen: one night's results. Opened after stopping a recordin
   - − / + and **Whole night** do the same with one finger.
 - **Screen readers:** a summary, and swipe up or down to step the playhead.
 
-### 5.9 Recordings
+### 5.9 Reports
 
-The history tab.
+The second tab (it was "Recordings", a list of nights). It opens straight on **the most recent night's report** (Recording Details, section 5.8), so the morning check is one tap.
 
-- **Header:** "Recordings" and the avatar (opens Profile).
-- **One overall insight** on the gradient: a lightbulb, at most two lines, at most one action. It follows the ladder (section 7). Examples:
-
-| Step | Message | Action |
-| --- | --- | --- |
-| Quiet | Hi Kedar. Your breathing was steady this week. | |
-| Getting better | Your breathing was steadier this week than last. | |
-| Notice | You snored for 42 min last night, mostly after 3 am. | Have a listen |
-| Compare | You snored more than usual on 3 nights this week. | |
-| Pattern + suggest | Paused breathing on 5 of 7 nights. Worth seeing a doctor. | Book a callback |
-| Help them act | Your report is ready to share with a doctor. | Share report |
-| No data | We couldn't hear enough last night. Try your phone closer to the bed. | |
-| Building up | Record 3 more nights for your first weekly summary. | |
-
-- **The list:**
-  - nights grouped by month, newest first;
-  - each row: the date, the night's status mark and headline, and the length ("Worth a closer look · 7 hr 40 min");
-  - a row opens Recording Details.
-- **Empty:** "No recordings yet" / "Tap the record button on Home at bedtime, and your nights will appear here."
-- **Prototype:** the insight changes on every visit so the range can be reviewed. Twelve sample nights over 40 days.
+- **Top right: a calendar button** (in place of the avatar; Profile stays on Home). It drops a **top sheet** down from the top: the bottom sheet's twin, closed by a tap outside, a drag up, or Android back.
+- **The calendar:** one month, weeks starting on Sunday.
+  - **Header:** "October 2026 ⌄" with ‹ › for months. Tap the month name for a month grid with ‹ › for years; tap a month to go back to its days. Months run from the first recording to this month.
+  - **Each recorded night has a ring for its Sound Score**, through the loudness ramp, like the Sound Score tile (fuller is louder). A dashed ring: recorded, but Airese couldn't hear clearly. No ring: nothing recorded.
+  - Only recorded nights can be picked; picking one closes the sheet and shows that night's report. The night on show is filled in Breath; today's date is in Breath; days still to come are dimmed.
+- **Missed nights:** when 4 or more of the last 14 nights have no recording (product to confirm), a calm note under the calendar: "You recorded 7 of the last 14 nights. A bedtime reminder can help." **Remind me at bedtime** asks for notifications if they're off, then turns the bedtime reminder on. Once both are on, the note goes.
+- **No recordings yet:** "Reports" / "Your first report appears here the morning after you record a night." **Record tonight** (to Home).
+- **Removed with the list:** the overall insight banner ("Your breathing was steadier this week than last."). Its ladder messages now live in each night's verdict card.
 
 ### 5.10 Profile
 
-Account settings, opened from the avatar on Home or Recordings. One short page of rows; anything with a form or switches opens one level down.
+Account settings, opened from the avatar on Home. One short page of rows; anything with a form or switches opens one level down.
 
 | Section | Rows |
 | --- | --- |
-| You | Initials (no photo), name and email → **Your details**. When empty: "Add your details · Name, email and where you live". |
+| You | Initials (no photo), name and phone (or email) → **Your details**. When empty: "Add your details · Name, phone and a little about you". |
 | Sleep care | **Talk to a sleep care team** (dials; shows hours) · **Our centres ›** ("Find The Air Station near you") |
 | Settings | **Notifications ›** ("On · 2 of 3" or "Off") · **Microphone** ("On · needed to record your night", or "Off · Airese can't record without it" with **Turn on**) |
 | About | **How Airese works** · **Privacy policy** · **Terms of use** (each in a sheet). Footer: "Airese is not a medical device and doesn't diagnose. Talk to a doctor about any health concerns." |
@@ -384,9 +386,8 @@ Account settings, opened from the avatar on Home or Recordings. One short page o
 
 **Your details (page):**
 
-- **Fields:** name, year of birth, email, phone, and where you live (city, state or region, country).
+- **Fields:** the same as onboarding (section 5.4): name, phone, email, and the About you tiles (gender, age, height, weight, where you live).
 - **Saving:** edits are a draft with a sticky **Save**; Back discards them. Each field is checked when you leave it, and all are checked again on Save.
-- **Footer on where you live:** "Kept on this phone. Shared with the sleep care team only if you ask them to call you."
 
 **Notifications (page):** a "Notifications are off" row with **Turn on** while the permission is off, then the three switches (section 5.11). Footer: "To turn off all notifications, use your phone's Settings."
 
@@ -447,18 +448,18 @@ Airese gets more direct only as evidence builds up. **Each step unlocks only whe
 
 | # | Step | Example | Where it shows |
 | --- | --- | --- | --- |
-| 1 | Notice | You snored for 42 minutes. | Verdict card, Recordings insight |
+| 1 | Notice | You snored for 42 minutes. | Verdict card |
 | 2 | Compare | That's more than your usual. | Trends, Unusual state |
-| 3 | Spot a pattern | 4 of the last 7 nights. | Pattern state, Recordings insight |
+| 3 | Spot a pattern | 4 of the last 7 nights. | Pattern state |
 | 4 | Explain | Loud, frequent snoring can come with paused breathing. | Sheets, "what it means" |
 | 5 | Suggest | Worth mentioning to a doctor. | Pattern state, "what it means" |
-| 6 | Help them act | Talk to a sleep care team · Share your report. | Footer button, Recordings insight |
+| 6 | Help them act | Talk to a sleep care team · Share your report. | Footer button |
 
 **What it means**, by state:
 
 - **Ordinary:** "Nothing unusual stood out."
-- **Unusual:** "Something to keep an eye on… One night alone doesn't show a pattern."
-- **Pattern:** "This has been happening regularly… Your breathing was interrupted often on 5 of your last 7 recorded nights. This is worth discussing with a doctor."
+- **Unusual:** "Something to keep an eye on… One night is hard to read on its own. We'll see how the week looks."
+- **Pattern:** "5 of 7 nights" / "Your breathing paused often on 5 of the last 7 nights. This is worth getting checked by a doctor." (the deck's pattern screen, word for word)
 
 ---
 
@@ -530,7 +531,7 @@ Full detail in [BRAND.md](BRAND.md).
 
 | Decision | Why |
 | --- | --- |
-| Start now, stop when you wake; 12-hour safety stop; no stop time at bedtime | A stop time is a guess people can't make at bedtime, and stopping too early loses data. The morning stop leads straight to the results. See RECORDING.md. |
+| Start now, stop when you wake; 8-hour safety stop; no stop time at bedtime | A stop time is a guess people can't make at bedtime, and stopping too early loses data. The morning stop leads straight to the results. See RECORDING.md. |
 | Tap to start (not press and hold) | Simpler. Stopping still confirms, so a stray tap costs nothing. |
 | No scheduled start, no alarm | Platform limits; an unreliable alarm would be the worst failure. |
 | Verdict first, then scores; on a first night, proof before scores | Belief comes from hearing yourself; scores mean little without a comparison. |
@@ -556,7 +557,7 @@ Full detail in [BRAND.md](BRAND.md).
 | Partner sharing of a clip | Product, Privacy |
 | Notification copy and timing; onboarding copy still says "two a day" | Product |
 | Support number, hours, centre details, privacy policy, terms | Easmed, Legal |
-| 12-hour cap against battery and storage | Engineering |
+| 8-hour cap against battery and storage | Engineering |
 | Medical-device position and disclaimer wording | Regulatory, Legal |
 
 ---

@@ -1,14 +1,14 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { INTENSITY_LABEL, type Intensity } from '../lib/nightDetails';
-import { colors, loudness, space } from '../theme';
+import { alpha, colors, loudness, space } from '../theme';
 import { AppText } from './AppText';
 
 const ORDER: Intensity[] = ['light', 'moderate', 'loud', 'veryLoud'];
 
 /**
  * How the snoring split by loudness (after the reference): a dot, the level, a bar and the share.
- * One hue (Ember) from light to deep, so louder reads as stronger. `compact`: one stacked bar.
+ * The `loudness` ramp, cyan to red, the same colours as the snoring chart. `compact`: one stacked bar.
  */
 export function LoudnessBars({ share, compact = false }: { share: Record<Intensity, number>; compact?: boolean }) {
   if (compact) {
@@ -43,6 +43,6 @@ export function LoudnessBars({ share, compact = false }: { share: Record<Intensi
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 28 },
   dot: { width: 12, height: 12, borderRadius: 6 },
-  track: { flex: 1, height: 10, borderRadius: 5, backgroundColor: 'rgba(179, 189, 211, 0.1)', overflow: 'hidden' },
+  track: { flex: 1, height: 10, borderRadius: 5, backgroundColor: alpha(colors.mist, 0.1), overflow: 'hidden' },
   stack: { flexDirection: 'row', height: 12, borderRadius: 6, overflow: 'hidden', gap: 2, backgroundColor: colors.surface },
 });

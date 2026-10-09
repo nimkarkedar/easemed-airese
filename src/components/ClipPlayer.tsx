@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Animated, Pressable, StyleSheet, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
 import { CLIP_LABEL, type Clip, type ClipMark } from '../lib/nightDetails';
-import { colors, space } from '../theme';
+import { alpha, colors, space } from '../theme';
 import { AppText } from './AppText';
 import { clipColor, type ClipPlayerState as Player } from './AudioSnippet';
 import { Icon } from './Icon';
@@ -107,11 +107,11 @@ const styles = StyleSheet.create({
   markLabels: { height: 20, marginTop: space.xl },
   markLabel: { position: 'absolute', top: 0 },
   mark: { position: 'absolute', top: -6, bottom: -6, borderRadius: 8, borderWidth: 1.5 },
-  markPause: { borderColor: colors.dataBreathing, borderStyle: 'dashed', backgroundColor: 'rgba(185, 163, 255, 0.10)' },
-  markBreath: { borderColor: colors.dataSnoring, backgroundColor: 'rgba(255, 170, 92, 0.08)' },
+  markPause: { borderColor: colors.dataBreathing, borderStyle: 'dashed', backgroundColor: alpha(colors.iris, 0.10) },
+  markBreath: { borderColor: colors.dataSnoring, backgroundColor: alpha(colors.ember, 0.08) },
   wave: { height: WAVE_H, flexDirection: 'row', alignItems: 'center', gap: 3 },
   scrub: { height: KNOB + 8, justifyContent: 'center', marginTop: space.lg },
-  track: { height: 4, borderRadius: 2, backgroundColor: 'rgba(238, 241, 247, 0.15)' },
+  track: { height: 4, borderRadius: 2, backgroundColor: alpha(colors.moon, 0.15) },
   done: { position: 'absolute', left: 0, height: 4, borderRadius: 2 },
   knob: { position: 'absolute', left: 0, width: KNOB, height: KNOB, borderRadius: KNOB / 2, backgroundColor: colors.text },
   times: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.xs },

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import { colors, space } from '../theme';
+import { alpha, colors, space } from '../theme';
 import { AppText } from './AppText';
 
 const GAP = 6;
@@ -28,7 +28,7 @@ export function HourlyBars({ hours, compact = false, color = colors.dataSnoring,
                   {`${h.minutes} ${unit}`}
                 </AppText>
               )}
-              <View style={{ width: '100%', height: Math.max(3, (h.minutes / max) * (H - (compact ? 0 : 26))), borderRadius: compact ? 2 : 4, backgroundColor: h.minutes ? color : 'rgba(238, 241, 247, 0.14)' }} />
+              <View style={{ width: '100%', height: Math.max(3, (h.minutes / max) * (H - (compact ? 0 : 26))), borderRadius: compact ? 2 : 4, backgroundColor: h.minutes ? color : alpha(colors.moon, 0.14) }} />
             </View>
           ))}
       </View>

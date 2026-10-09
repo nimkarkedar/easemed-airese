@@ -29,31 +29,28 @@ type GroupProps = {
   error?: string;
   /** Lay inputs out in a row (date of birth) instead of stacked. */
   row?: boolean;
+  /** Inside a bottom sheet (Deep): the card takes the app background so it still stands out. */
+  onSheet?: boolean;
   children: React.ReactNode;
   style?: ViewStyle;
 };
 
-export function FormGroup({ title, titleAction, footer, error, row, children, style }: GroupProps) {
+export function FormGroup({ title, titleAction, footer, error, row, onSheet, children, style }: GroupProps) {
   const [focused, setFocused] = useState(0); // count, so moving between inputs in a group doesn't flicker
   const onFocusChange = (f: boolean) => setFocused((n) => Math.max(0, n + (f ? 1 : -1)));
-  const ring = error ? colors.error : focused > 0 ? colors.accent : 'transparent';
+  const ring = error ? colors.errorMark : focused > 0 ? colors.accent : 'transparent';
 
   return (
     <View style={style}>
-      <View style={styles.titleRow}>
-        <AppText variant="small" color="textMuted" style={styles.title} accessibilityRole="header">
-          {title}
-        </AppText>
-        {titleAction}
-      </View>
+      <FormTitle title={title} action={titleAction} />
 
       <FocusContext.Provider value={onFocusChange}>
-        <View style={[styles.card, row && styles.cardRow, { borderColor: ring }]}>{children}</View>
+        <View style={[styles.card, row && styles.cardRow, onSheet && { backgroundColor: colors.background }, { borderColor: ring }]}>{children}</View>
       </FocusContext.Provider>
 
       {(error || footer) && (
         <View style={styles.footer}>
-          {error && <Icon name="error" size={16} color="error" />}
+          {error && <Icon name="error" size={16} color="errorMark" />}
           <AppText variant="small" color={error ? 'error' : 'textMuted'} style={{ flex: 1 }} accessibilityLiveRegion={error ? 'polite' : 'none'}>
             {error ?? footer}
           </AppText>
@@ -63,17 +60,35 @@ export function FormGroup({ title, titleAction, footer, error, row, children, st
   );
 }
 
+/**
+ * The one section label: small, uppercase, Mist, 1 pt tracking. Form groups, tile sections, list
+ * sections and chip groups (Night Notes remedies) all use it.
+ */
+export function FormTitle({ title, action }: { title: string; action?: React.ReactNode }) {
+  return (
+    <View style={styles.titleRow}>
+      <AppText variant="small" color="textMuted" style={styles.title} accessibilityRole="header">
+        {title}
+      </AppText>
+      {action}
+    </View>
+  );
+}
+
 type InputProps = Omit<TextInputProps, 'style'> & {
-  /** Something small at the end of the row (e.g. a "Verify" text button). */
+  /** Something small at the start of the row (e.g. the phone's country code chip). */
+  leading?: React.ReactNode;
+  /** Something small at the end of the row (e.g. a text button). */
   trailing?: React.ReactNode;
   style?: ViewStyle;
 };
 
 /** A plain native text input row. The placeholder names the field; the group title gives context. */
-export const FormInput = forwardRef<TextInput, InputProps>(function FormInput({ trailing, style, onFocus, onBlur, ...input }, ref) {
+export const FormInput = forwardRef<TextInput, InputProps>(function FormInput({ leading, trailing, style, onFocus, onBlur, ...input }, ref) {
   const setGroupFocus = useContext(FocusContext);
   return (
     <View style={[styles.inputRow, style]}>
+      {leading}
       <TextInput
         ref={ref}
         style={styles.input}
