@@ -30,6 +30,7 @@ export * from './ExplainSheet';
 export * from './DataCard';
 export * from './LargeSheet';
 export * from './ScoreRing';
+export * from './RampFill';
 export * from './BenchmarkScale';
 export * from './HourlyBars';
 export * from './LoudnessBars';

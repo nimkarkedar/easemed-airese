@@ -2,14 +2,18 @@ import React, { useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { alpha, colors, space } from '../theme';
 import { AppText } from './AppText';
+import { RampFill } from './RampFill';
 
 const GAP = 6;
 
 /**
- * Snoring minutes in each hour of the night (Ember; hours with none show a faint neutral stub),
- * hour labels underneath, the busiest hour labelled with its minutes. `compact`: a small sparkline for a square card (no labels).
+ * Snoring minutes (or breathing pauses) in each hour of the night, hour labels underneath, the busiest
+ * hour labelled with its value. Each bar runs through the loudness ramp up to the colour its value
+ * reaches on `scale` (the value that counts as the top: a whole hour of snoring by default), like the
+ * score rings; hours with none show a faint neutral stub. Heights are relative to the night's busiest
+ * hour, colours to the fixed scale, so a quiet night stays cyan. `compact`: a small sparkline for a square card (no labels).
  */
-export function HourlyBars({ hours, compact = false, color = colors.dataSnoring, what = 'Snoring', unit = 'min' }: { hours: { label: string; minutes: number }[]; compact?: boolean; color?: string; what?: string; unit?: string }) {
+export function HourlyBars({ hours, compact = false, scale = 60, what = 'Snoring', unit = 'min' }: { hours: { label: string; minutes: number }[]; compact?: boolean; scale?: number; what?: string; unit?: string }) {
   const [width, setWidth] = useState(0);
   const H = compact ? 44 : 120;
   const max = Math.max(1, ...hours.map((h) => h.minutes));
@@ -28,7 +32,9 @@ export function HourlyBars({ hours, compact = false, color = colors.dataSnoring,
                   {`${h.minutes} ${unit}`}
                 </AppText>
               )}
-              <View style={{ width: '100%', height: Math.max(3, (h.minutes / max) * (H - (compact ? 0 : 26))), borderRadius: compact ? 2 : 4, backgroundColor: h.minutes ? color : alpha(colors.moon, 0.14) }} />
+              <View style={{ width: '100%', height: Math.max(3, (h.minutes / max) * (H - (compact ? 0 : 26))), borderRadius: compact ? 2 : 4, overflow: 'hidden', backgroundColor: h.minutes ? undefined : alpha(colors.moon, 0.14) }}>
+                {h.minutes > 0 && <RampFill to={h.minutes / scale} />}
+              </View>
             </View>
           ))}
       </View>

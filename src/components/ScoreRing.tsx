@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { alpha, colors, motion, useReducedMotion } from '../theme';
+import { alpha, colors, motion, rampColor, useReducedMotion } from '../theme';
 import { Icon, type IconName } from './Icon';
 
 /**
@@ -93,15 +93,3 @@ function RampArc({ size, r, stroke, to, ramp }: { size: number; r: number; strok
     </>
   );
 }
-
-/** The colour at `t` (0 to 1) along evenly spaced ramp stops, blended between the nearest two. */
-export function rampColor(ramp: readonly string[], t: number) {
-  const pos = Math.max(0, Math.min(1, t)) * (ramp.length - 1);
-  const i = Math.min(ramp.length - 2, Math.floor(pos));
-  const k = pos - i;
-  const ch = (h: string, j: number) => parseInt(h.slice(1 + j * 2, 3 + j * 2), 16);
-  return `rgb(${[0, 1, 2].map((j) => Math.round(ch(ramp[i], j) + (ch(ramp[i + 1], j) - ch(ramp[i], j)) * k)).join(', ')})`;
-}
-
-/** Ring colour per score: the data colours; Rest (a mix of everything) is neutral Moon. */
-export const scoreColor = { snoring: colors.dataSnoring, breathing: colors.dataBreathing, sleep: colors.dataSleep, rest: colors.text } as const;

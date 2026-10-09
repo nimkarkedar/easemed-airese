@@ -1,16 +1,15 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { alpha, colors, loudness, radius, space, type } from '../theme';
+import { alpha, colors, dataInk, loudnessRamp, radius, space, type } from '../theme';
 import { AppText } from './AppText';
 import { Icon, type IconName } from './Icon';
-import { ScoreRing, rampColor } from './ScoreRing';
+import { ScoreRing } from './ScoreRing';
 import type { DataTone } from './DataCard';
 
 const INK: Record<Exclude<DataTone, 'neutral'>, string> = { snoring: colors.dataSnoring, breathing: colors.dataBreathing, sleep: colors.dataSleep };
 const TINT: Record<Exclude<DataTone, 'neutral'>, string> = { snoring: colors.tintSnoring, breathing: colors.tintBreathing, sleep: colors.tintSleep };
 // Snoring and breathing pauses: more is worse, so their rings run through the loudness ramp (cyan to red).
 // Sleep (more is better) keeps its own colour.
-const RAMP = [loudness.light, loudness.moderate, loudness.loud, loudness.veryLoud] as const;
 const RAMPED: Partial<Record<Exclude<DataTone, 'neutral'>, boolean>> = { snoring: true, breathing: true };
 
 /**
@@ -44,7 +43,7 @@ export function ScoreTile({
   accessibilityLabel?: string;
 }) {
   const ramped = RAMPED[tone];
-  const ink = ramped ? rampColor(RAMP, Math.max(0.04, Math.min(1, fraction))) : INK[tone];
+  const ink = dataInk(tone, fraction);
   return (
     <Pressable
       onPress={onPress}
@@ -58,7 +57,7 @@ export function ScoreTile({
           <Icon name="chevron_right" size={20} color="textMuted" />
         </View>
       ) : null}
-      <ScoreRing fraction={fraction} color={INK[tone]} ramp={ramped ? RAMP : undefined} size={116} stroke={10}>
+      <ScoreRing fraction={fraction} color={INK[tone]} ramp={ramped ? loudnessRamp : undefined} size={116} stroke={10}>
         {value ? (
           <AppText variant="title" color="text" numberOfLines={1}>
             {value}

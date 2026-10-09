@@ -2,15 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { clockAt, type Clip, type NightDetails } from '../lib/nightDetails';
-import { alpha, colors, motion, space, useReducedMotion } from '../theme';
+import { alpha, colors, loudnessRamp, motion, space, useReducedMotion } from '../theme';
 import { AppText } from './AppText';
+import { RampFill } from './RampFill';
 
 const SLEEP_H = 4;
 const RING = 12;
 
 /**
  * The night at a glance (PRD §9), drawn after the references:
- *   snoring   Ember bars every 3 minutes (one bar per step), taller is louder, fading towards the base
+ *   snoring   bars every 3 minutes (one bar per step), taller is louder, through the loudness ramp
+ *             pinned to the plot (cyan at the base, red only at very loud), as in the snoring chart
  *   breathing Iris ticks along the top where breathing was interrupted (a different shape)
  *   asleep    a Dew line under the axis, with gaps where it sounded awake or restless
  * Faint hour lines; start and end times above. Bars grow in once (slow ease-out); Reduce Motion: drawn at once.
@@ -66,9 +68,11 @@ export function NightTimeline({ details, full = false, clips = [], playing, onCl
             >
               <Svg width={width} height={H}>
                 <Defs>
-                  <LinearGradient id="snore" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor={colors.dataSnoring} stopOpacity={1} />
-                    <Stop offset="1" stopColor={colors.dataSnoring} stopOpacity={0.25} />
+                  {/* One gradient for all bars, from the baseline (quiet) to the top of the scale (very loud) */}
+                  <LinearGradient id="snore" gradientUnits="userSpaceOnUse" x1="0" y1={H} x2="0" y2={20}>
+                    {loudnessRamp.map((c, i) => (
+                      <Stop key={c} offset={i / (loudnessRamp.length - 1)} stopColor={c} />
+                    ))}
                   </LinearGradient>
                 </Defs>
                 {details.bins.map((v, i) =>
@@ -106,7 +110,7 @@ export function NightTimeline({ details, full = false, clips = [], playing, onCl
 
       {/* Legend */}
       <View style={styles.legend}>
-        <Key swatch={<View style={[styles.keyDot, { backgroundColor: colors.dataSnoring }]} />} label="Snoring" />
+        <Key swatch={<View style={styles.keyRamp}><RampFill direction="right" to={1} /></View>} label="Snoring, quiet to loud" />
         {details.breathingEvents.length > 0 && <Key swatch={<View style={styles.keyTick} />} label="Breathing pause" />}
         <Key swatch={<View style={styles.keyLine} />} label="Asleep" />
         {full && clips.length > 0 && <Key swatch={<View style={[styles.ring, styles.keyRing]} />} label="Clip" />}
@@ -148,7 +152,7 @@ const styles = StyleSheet.create({
   ring: { position: 'absolute', width: RING, height: RING, borderRadius: RING / 2, borderWidth: 2, borderColor: colors.text, backgroundColor: colors.surface },
   ringOn: { backgroundColor: colors.text },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.lg, rowGap: space.sm, marginTop: space.lg },
-  keyDot: { width: 10, height: 10, borderRadius: 5 },
+  keyRamp: { width: 24, height: 10, borderRadius: 5, overflow: 'hidden' },
   keyTick: { width: 2, height: 12, borderRadius: 1, backgroundColor: colors.dataBreathing },
   keyLine: { width: 14, height: SLEEP_H, borderRadius: SLEEP_H / 2, backgroundColor: colors.dataSleep },
   keyRing: { position: 'relative' },

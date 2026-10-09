@@ -2,17 +2,19 @@ import React, { useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { alpha, colors, space } from '../theme';
 import { AppText } from './AppText';
+import { RampFill } from './RampFill';
 
 const HEIGHT = 112; // plot height
 const GAP = 8; // between bars
 const LABEL = 22; // room above the tallest bar for tonight's value
 
 /**
- * The last 7 nights as bars: tonight in Ember (snoring) with its value on top, the earlier
- * nights in neutral grey, and a dashed line at the user's usual. Day names underneath.
- * Single series, so no legend box; the card's sentence names it.
+ * The last 7 nights as bars: tonight through the loudness ramp up to `level` (where tonight sits on
+ * its guide scale, 0 to 1, so the bar ends in the same colour as tonight's snoring score) with its
+ * value on top, the earlier nights in neutral grey, and a dashed line at the user's usual. Day names
+ * underneath. Single series, so no legend box; the card's sentence names it.
  */
-export function RecentNightsChart({ nights, usual, format }: { nights: { day: string; value: number; tonight: boolean }[]; usual: number; format: (v: number) => string }) {
+export function RecentNightsChart({ nights, usual, level, format }: { nights: { day: string; value: number; tonight: boolean }[]; usual: number; level: number; format: (v: number) => string }) {
   const [width, setWidth] = useState(0);
   const max = Math.max(usual, ...nights.map((n) => n.value)) * 1.05 || 1;
   const y = (v: number) => (v / max) * (HEIGHT - LABEL);
@@ -25,7 +27,7 @@ export function RecentNightsChart({ nights, usual, format }: { nights: { day: st
         {width > 0 &&
           nights.map((n, i) => (
             <View key={i} style={{ position: 'absolute', left: i * (barW + GAP), width: barW, bottom: 0, alignItems: 'center' }}>
-              <View style={[styles.bar, { height: Math.max(4, y(n.value)) }, !n.tonight && styles.earlier]} />
+              <View style={[styles.bar, { height: Math.max(4, y(n.value)) }, !n.tonight && styles.earlier]}>{n.tonight && <RampFill to={level} />}</View>
             </View>
           ))}
         {/* Tonight's value, above its bar (the last one), right-aligned to the card */}
@@ -60,8 +62,8 @@ export function RecentNightsChart({ nights, usual, format }: { nights: { day: st
 const styles = StyleSheet.create({
   // Wider than its bar, so the value stays on one line; right-aligned so it never runs off the card.
   value: { position: 'absolute', right: 0, width: 140, textAlign: 'right' },
-  bar: { width: '100%', borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: colors.dataSnoring },
-  earlier: { backgroundColor: alpha(colors.moon, 0.16) }, // earlier nights neutral, so tonight's Ember stands out
+  bar: { width: '100%', borderTopLeftRadius: 4, borderTopRightRadius: 4, overflow: 'hidden' },
+  earlier: { backgroundColor: alpha(colors.moon, 0.16) }, // earlier nights neutral, so tonight's colour stands out
   usual: { position: 'absolute', left: 0, right: 0, height: 0 },
   dash: { flex: 1, borderTopWidth: 1.5, borderStyle: 'dashed', borderColor: colors.mist },
   baseline: { height: StyleSheet.hairlineWidth, backgroundColor: colors.divider },

@@ -157,6 +157,7 @@ const BLURB = {
   "NightTimeline": "Snoring bars, breathing ticks and an asleep line across the night; optional clip rings.",
   "ScoreRing": "Ring filled to a fraction, with an icon or number inside.",
   "BenchmarkScale": "Bar of named zones, with markers for tonight and your usual.",
+  "RampFill": "Fills a bar with the loudness ramp up to the colour its value reaches, like the score rings.",
   "HourlyBars": "Minutes or counts per hour of the night.",
   "LoudnessBars": "How snoring split by loudness.",
   "RecentNightsChart": "Last 7 nights as bars, with a line at your usual.",
@@ -175,7 +176,7 @@ const GROUPS = [
   ['Sheets and feedback', [['BottomSheet'], ['TopSheet'], ['ExplainSheet'], ['LargeSheet'], ['PermissionSheet'], ['Toast'], ['SystemAlertHost']]],
   ['Recording', [['RecordDial'], ['ListeningRing'], ['TipCarousel']]],
   ['Reports', [['MonthCalendar']]],
-  ['Data visualisation', [['SnoringChart'], ['NightTimeline'], ['ScoreRing'], ['BenchmarkScale'], ['HourlyBars'], ['LoudnessBars'], ['RecentNightsChart'], ['ComparisonIndicator']]],
+  ['Data visualisation', [['SnoringChart'], ['NightTimeline'], ['ScoreRing'], ['RampFill'], ['BenchmarkScale'], ['HourlyBars'], ['LoudnessBars'], ['RecentNightsChart'], ['ComparisonIndicator']]],
   ['Audio', [['ClipPlayer'], ['AudioSnippet']]],
   ['Recording Details parts', [['PrivacyFooter']]],
 ];

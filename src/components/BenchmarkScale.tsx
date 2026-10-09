@@ -10,7 +10,7 @@ const GAP = 3;
 
 /**
  * Where tonight sits: a bar split into zones (named underneath), the zone tonight falls in filled
- * in the data's colour (the others neutral), a marker for tonight, and a small tick for the
+ * in `color`, the colour the score reaches (`dataInk`, as on its ring; the others neutral), a marker for tonight, and a small tick for the
  * user's usual when known. Words do the judging, not colour alone.
  */
 export function BenchmarkScale({ b, color }: { b: Benchmark; color: string }) {

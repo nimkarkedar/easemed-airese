@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { dayKey, type CalendarNight } from '../lib/reports';
-import { colors, loudness, radius, space } from '../theme';
+import { colors, loudnessRamp, radius, space } from '../theme';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
 import { ScoreRing } from './ScoreRing';
@@ -12,8 +12,6 @@ const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const RING = 40;
 const CELL = 48;
-// The Sound Score ring runs through the loudness ramp, as on the report's Sound Score tile.
-const RAMP = [loudness.light, loudness.moderate, loudness.loud, loudness.veryLoud] as const;
 
 const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const monthIndex = (d: Date) => d.getFullYear() * 12 + d.getMonth();
@@ -160,7 +158,7 @@ function Days({ month, nights, selected, onPick, today }: { month: Date; nights:
                   </Svg>
                 ) : (
                   <View style={styles.ring}>
-                    <ScoreRing fraction={n.score / 100} color={colors.dataSnoring} ramp={RAMP} size={RING} stroke={3} />
+                    <ScoreRing fraction={n.score / 100} color={colors.dataSnoring} ramp={loudnessRamp} size={RING} stroke={3} />
                   </View>
                 )
               ) : null}

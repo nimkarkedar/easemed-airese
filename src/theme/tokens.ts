@@ -99,6 +99,38 @@ export type ColorName = keyof typeof colors;
  */
 export const loudness = { light: '#2EC9EA', moderate: '#FFD84A', loud: '#FF9A3C', veryLoud: palette.flare } as const;
 
+/**
+ * The loudness colours as one ramp, quiet to very loud. Every "how much, how loud" mark for snoring and
+ * breathing pauses (rings, bars, scales, the timeline) runs through it and ends in the colour its value
+ * reaches on its own scale, so a low value stays cyan and only near the top reaches red.
+ */
+export const loudnessRamp = [loudness.light, loudness.moderate, loudness.loud, loudness.veryLoud] as const;
+
+/** The colour at `t` (0 to 1) along evenly spaced ramp stops, blended between the nearest two. */
+export function rampColor(ramp: readonly string[], t: number) {
+  const pos = Math.max(0, Math.min(1, t)) * (ramp.length - 1);
+  const i = Math.min(ramp.length - 2, Math.floor(pos));
+  const k = pos - i;
+  const ch = (h: string, j: number) => parseInt(h.slice(1 + j * 2, 3 + j * 2), 16);
+  return `rgb(${[0, 1, 2].map((j) => Math.round(ch(ramp[i], j) + (ch(ramp[i + 1], j) - ch(ramp[i], j)) * k)).join(', ')})`;
+}
+
+/** Gradient stops for a mark that fills `to` (0 to 1) of its scale: the ramp up to the colour it reaches. */
+export function rampStops(ramp: readonly string[], to: number) {
+  const f = Math.max(0.001, Math.min(1, to));
+  const inner = ramp.map((c, i) => ({ at: i / (ramp.length - 1), color: c })).filter((s) => s.at < f);
+  return [...inner.map((s) => ({ offset: s.at / f, color: s.color })), { offset: 1, color: rampColor(ramp, f) }];
+}
+
+/**
+ * A data kind's colour at a point on its scale. Snoring and breathing pauses (more is worse) take the
+ * loudness ramp; sleep keeps Dew; rest (a mix of everything) is neutral Moon.
+ */
+export function dataInk(tone: 'snoring' | 'breathing' | 'sleep' | 'rest', fraction: number) {
+  if (tone === 'snoring' || tone === 'breathing') return rampColor(loudnessRamp, Math.max(0.04, fraction));
+  return tone === 'sleep' ? palette.dew : palette.moon;
+}
+
 /** 4-pt grid */
 export const space = {
   xs: 4,

@@ -1,19 +1,26 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { colors, motion, radius, space, useReducedMotion, type ColorName } from '../theme';
 import { AppText } from './AppText';
-import { Icon, type IconName } from './Icon';
+import { Button } from './Button';
+import { type IconName } from './Icon';
 import { HeroBackground } from './InsightCard';
 
-type Mood = 'calm' | 'watch' | 'urgent';
+export type Mood = 'calm' | 'watch' | 'urgent';
 
-/** The trend's colour, and the action's colours, by mood. All UI colours from the palette (BRAND §4). */
-const LOOK: Record<Mood, { line: ColorName; button: ColorName }> = {
-  calm: { line: 'accent', button: 'accent' }, // Breath
-  watch: { line: 'lamp', button: 'lamp' }, // Lamp: the one warm light, for the action (Midnight on Lamp, 10:1)
-  urgent: { line: 'flare', button: 'urgentAction' }, // coral: the one care action on a repeated pattern (BRAND §4); Midnight on it, 7.7:1
-};
+/**
+ * The night's next step, by mood: its colour wherever it shows (this card, and the page's sticky footer
+ * once the card has scrolled away), so the two always match. Midnight label on each.
+ */
+export const VERDICT_ACTION = {
+  calm: 'accent', // Breath
+  watch: 'lamp', // Lamp: the one warm light, for the action (Midnight on Lamp, 10:1)
+  urgent: 'urgentAction', // coral: the one care action on a repeated pattern (BRAND §4); Midnight on it, 7.7:1
+} as const satisfies Record<Mood, ColorName>;
+
+/** The trend line's colour by mood. All UI colours from the palette (BRAND §4). */
+const LINE: Record<Mood, ColorName> = { calm: 'accent', watch: 'lamp', urgent: 'flare' };
 
 /**
  * The night's verdict, at the top of Recording Details: headline, a sentence or two, and the one
@@ -41,12 +48,11 @@ export function VerdictCard({
   values: number[];
   action: { label: string; icon?: IconName; onPress: () => void };
 }) {
-  const look = LOOK[mood];
   const [textBottom, setTextBottom] = useState(0); // where the words end: behind them the graph stays within the contrast budget
   return (
     <View style={styles.card}>
       <HeroBackground mood={mood} />
-      {textBottom > 0 && <TrendBackdrop values={values} mood={mood} color={colors[look.line]} textBottom={textBottom} />}
+      {textBottom > 0 && <TrendBackdrop values={values} mood={mood} color={colors[LINE[mood]]} textBottom={textBottom} />}
       <View onLayout={(e) => setTextBottom(e.nativeEvent.layout.y + e.nativeEvent.layout.height)}>
         <AppText variant="heading" color="text" accessibilityRole="header">
           {title}
@@ -55,17 +61,7 @@ export function VerdictCard({
           {body}
         </AppText>
       </View>
-      <Pressable
-        onPress={action.onPress}
-        accessibilityRole="button"
-        accessibilityLabel={action.label}
-        style={({ pressed }) => [styles.button, { backgroundColor: colors[look.button] }, pressed && { opacity: 0.85 }]}
-      >
-        {action.icon ? <Icon name={action.icon} size={20} color="onAccent" /> : null}
-        <AppText variant="button" color="onAccent">
-          {action.label}
-        </AppText>
-      </Pressable>
+      <Button label={action.label} icon={action.icon} color={VERDICT_ACTION[mood]} onPress={action.onPress} style={styles.button} />
     </View>
   );
 }
@@ -216,5 +212,5 @@ const styles = StyleSheet.create({
   glint: { position: 'absolute', left: 0, top: 0, width: GLINT * 3, height: GLINT * 3, alignItems: 'center', justifyContent: 'center', shadowOpacity: 0.9, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
   halo: { position: 'absolute', width: GLINT * 3, height: GLINT * 3, borderRadius: GLINT * 1.5, opacity: 0.35 },
   core: { width: GLINT, height: GLINT, borderRadius: GLINT / 2, backgroundColor: colors.text },
-  button: { minHeight: 48, flexDirection: 'row', gap: space.sm, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.lg, borderRadius: radius.pill, marginTop: space.xl },
+  button: { marginTop: space.xl },
 });

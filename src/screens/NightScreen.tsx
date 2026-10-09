@@ -16,15 +16,17 @@ import {
   InsightCard,
   LargeSheet,
   LoudnessBars,
+  VERDICT_ACTION,
   VerdictCard,
+  type Mood,
   NightTimeline,
   PAGE_SIDE,
   PrivacyFooter,
+  RampFill,
   RecentNightsChart,
   ScoreTile,
   SnoringChart,
   asleepStretches,
-  scoreColor,
   useClipPlayer,
   type ClipPlayerState,
 } from '../components';
@@ -50,7 +52,7 @@ import {
 } from '../lib/nightDetails';
 import { formatNightDate, formatRecorded, formatSpan, type Night } from '../lib/recordings';
 import { formatDuration } from '../lib/time';
-import { alpha, colors, motion, radius, space, type } from '../theme';
+import { alpha, colors, dataInk, motion, radius, space, type } from '../theme';
 
 /** What a card opens: a large sheet. */
 type Sheet = 'report' | 'sound' | 'snoring' | 'breathing' | 'sleep' | 'clips' | 'recent';
@@ -141,14 +143,16 @@ export function NightScreen({
     if (player.playing !== c.id) player.toggle(c);
   };
 
-  // The night's one next step, in the verdict card and (once that's scrolled away) the sticky footer.
+  // The night's one next step, in the verdict card and (once that's scrolled away) the sticky footer:
+  // the same button in both places (label, icon, colour), so the page never offers two different actions.
   // Ordinary or first night: keep tracking. Unusual: something to try tonight. Repeated pattern: book a call.
+  const mood: Mood = concern ? 'urgent' : state === 'unusual' ? 'watch' : 'calm';
   const step = (leave: (then: () => void) => void) =>
     concern
-      ? { label: 'Book a call', footerLabel: 'Book a call with a sleep care team', icon: 'call' as const, onPress: () => setExplain('care') }
+      ? { label: 'Book a call', icon: 'call' as const, onPress: () => setExplain('care') }
       : state === 'unusual'
-        ? { label: 'Try using a remedy', footerLabel: 'Try a remedy tonight', icon: 'airwave' as const, onPress: () => setExplain('remedy') }
-        : { label: 'Keep tracking', footerLabel: 'Record again tonight', icon: 'mic' as const, onPress: () => (onRecordAgain ? onRecordAgain() : onBack && leave(onBack)) };
+        ? { label: 'Try using a remedy', onPress: () => setExplain('remedy') }
+        : { label: 'Keep tracking', onPress: () => (onRecordAgain ? onRecordAgain() : onBack && leave(onBack)) };
 
   // Snoring is a score; breathing a plain level (its exact rate is in its sheet and the report).
   const scores = (
@@ -226,7 +230,7 @@ export function NightScreen({
             ? undefined
             : (leave) => {
                 const s = step(leave);
-                return <Button label={s.footerLabel} onPress={s.onPress} />;
+                return <Button label={s.label} icon={s.icon} color={VERDICT_ACTION[mood]} onPress={s.onPress} />;
               }
         }
         footerAfter={ready ? heroBottom : undefined} // hidden from the start; shows once the verdict card has scrolled away
@@ -248,15 +252,12 @@ export function NightScreen({
               {/* The verdict: the words, the night's one next step, and the week as a graph behind them */}
               <View onLayout={(e) => setHeroBottom(e.nativeEvent.layout.y + e.nativeEvent.layout.height)}>
                 <VerdictCard
-                  mood={concern ? 'urgent' : state === 'unusual' ? 'watch' : 'calm'}
+                  mood={mood}
                   title={sum.headline}
                   body={sum.body}
                   // The week behind the words: last 7 nights of snoring (tonight last), or tonight hour by hour on a first night
                   values={d.recent.length ? d.recent.map((r) => r.snoringMinutes) : d.hourly.map((h) => h.minutes)}
-                  action={(() => {
-                    const s = step(leave);
-                    return { label: s.label, icon: concern ? s.icon : undefined, onPress: s.onPress };
-                  })()}
+                  action={step(leave)}
                 />
               </View>
 
@@ -285,7 +286,7 @@ export function NightScreen({
               {/* Recent nights, or a first-night note */}
               {usual ? (
                 <DataCard title="Your recent nights" insight={recentLine(d)} onPress={() => open('recent')}>
-                  <RecentNightsChart nights={d.recent.map((r) => ({ day: r.day, value: r.snoringMinutes, tonight: r.tonight }))} usual={usual.snoringMinutes} format={formatDuration} />
+                  <RecentNightsChart nights={d.recent.map((r) => ({ day: r.day, value: r.snoringMinutes, tonight: r.tonight }))} usual={usual.snoringMinutes} level={scaleAt(mark(marks, 'snoring'))} format={formatDuration} />
                 </DataCard>
               ) : (
                 <InsightCard icon="lightbulb" title="Your first night" body="This gives us a starting point. Record a few more nights and Airese can show you what’s typical for you." />
@@ -339,6 +340,8 @@ const REMEDY = {
 };
 
 const mark = (marks: Benchmark[], k: Benchmark['key']) => marks.find((b) => b.key === k)!;
+/** Where a score sits on its guide scale, 0 to 1. */
+const scaleAt = (b: Benchmark) => (b.value - b.min) / (b.max - b.min);
 
 // ---------- Small pieces ----------
 
@@ -501,7 +504,7 @@ function SheetBody({ which, d, marks, player }: { which: Sheet; d: NightDetails;
           <Lead value={`${b.value} an hour`} note={`${d.breathingEvents.length} pauses in ${formatDuration(d.sleepMinutes)} of sleep.`} />
           <ScoreCard b={b} />
           <Block label="By hour">
-            <HourlyBars hours={breathingByHour(d)} color={colors.dataBreathing} what="Breathing pauses" unit="pauses" />
+            <HourlyBars hours={breathingByHour(d)} scale={b.max} what="Breathing pauses" unit="pauses" />
           </Block>
           {usual && <Plain>{`Your usual is ${usual.breathingEvents} a night. ${trendWords[trend(d.breathingEvents.length, usual.breathingEvents)]} tonight.`}</Plain>}
           <Plain muted>{EXPLAIN.breathing.body}</Plain>
@@ -537,7 +540,7 @@ function SheetBody({ which, d, marks, player }: { which: Sheet; d: NightDetails;
     case 'recent':
       return (
         <View style={styles.sheetBody}>
-          {usual && <RecentNightsChart nights={d.recent.map((r) => ({ day: r.day, value: r.snoringMinutes, tonight: r.tonight }))} usual={usual.snoringMinutes} format={formatDuration} />}
+          {usual && <RecentNightsChart nights={d.recent.map((r) => ({ day: r.day, value: r.snoringMinutes, tonight: r.tonight }))} usual={usual.snoringMinutes} level={scaleAt(mark(marks, 'snoring'))} format={formatDuration} />}
           {usual && (
             <Block label="Tonight compared with your usual">
               <CompareRow label="Snoring" tonight={formatDuration(d.snoringMinutes)} usual={formatDuration(usual.snoringMinutes)} t={trend(d.snoringMinutes, usual.snoringMinutes)} />
@@ -551,7 +554,7 @@ function SheetBody({ which, d, marks, player }: { which: Sheet; d: NightDetails;
   }
 }
 
-/** One part of the Sound Score: a bar out of 50 and what it reflects. */
+/** One part of the Sound Score: a bar out of 50 (through the loudness ramp, like the score's ring) and what it reflects. */
 function Part({ label, value, note }: { label: string; value: number; note: string }) {
   return (
     <View style={styles.part} accessible accessibilityLabel={`${label}: ${value} of 50. ${note}`}>
@@ -560,7 +563,9 @@ function Part({ label, value, note }: { label: string; value: number; note: stri
         <AppText color="text" style={styles.semibold}>{`${value} of 50`}</AppText>
       </View>
       <View style={styles.partTrack}>
-        <View style={{ width: `${(value / 50) * 100}%`, height: '100%', borderRadius: 5, backgroundColor: colors.dataSnoring }} />
+        <View style={{ width: `${(value / 50) * 100}%`, height: '100%', borderRadius: 5, overflow: 'hidden' }}>
+          <RampFill direction="right" to={value / 50} />
+        </View>
       </View>
       <AppText variant="small" color="textMuted">
         {note}
@@ -572,7 +577,7 @@ function Part({ label, value, note }: { label: string; value: number; note: stri
 /** One score with its scale (All details). */
 function ScoreCard({ b }: { b: Benchmark }) {
   const zone = zoneOf(b);
-  const color = scoreColor[b.tone];
+  const color = dataInk(b.tone, scaleAt(b)); // the colour the score reaches, as on its ring
   return (
     <View style={styles.block}>
       <View style={styles.scoreHead}>

@@ -277,7 +277,7 @@ The most important screen: one night's results. It is the Reports tab's page (se
 #### Page template
 
 - **The calendar button** top right (section 5.9), the night's date as the title ("Tue, 6 Oct"), and, on two lines, "8 hr of recording" / "11:05 pm to 7:05 am". Last night (the night that started yesterday) also has a small Breath **Last night** tag at the end of the first line; other nights have none.
-- **A sticky footer** with one next step. **Keep tracking** on ordinary nights; **Talk to a sleep care team** only for a repeated pattern (it opens a sheet: "A sleep care team from The Air Station can go through your recent nights with you and suggest what to do next. It isn't a diagnosis." with **Request a callback** · **Not now**). Under it, "Powered by The Air Station".
+- **A sticky footer** with one next step, shown once the verdict card has scrolled away. It is **the same button as the verdict card's** (label, icon and colour), so the page never offers two different actions: **Keep tracking** (Breath) on ordinary nights, **Try using a remedy** (Lamp) on an unusual night, **Book a call** (coral, call icon) only for a repeated pattern (it opens a sheet: "A sleep care team from The Air Station can go through your recent nights with you and suggest what to do next. It isn't a diagnosis." with **Request a callback** · **Not now**). Under it, "Powered by The Air Station".
 
 #### States
 
@@ -288,7 +288,7 @@ The most important screen: one night's results. It is the Reports tab's page (se
 | First night | No history yet | Proof first: the night in sound comes **before** the scores. No comparisons. "Your first night" note instead of recent nights. |
 | Ordinary | Close to usual | "A steadier night". Blue card, low calm graph, **Keep tracking**. |
 | Unusual | One night out of the ordinary | "More snoring than usual". Warm dusk card, climbing Lamp graph, **Try using a remedy**. |
-| Repeated pattern | The same thing on many recent nights | "Worth a closer look". Wine card, drawn Flare climb, **Book a call** (coral). The sticky footer becomes **Book a call with a sleep care team**. |
+| Repeated pattern | The same thing on many recent nights | "Worth a closer look". Wine card, drawn Flare climb, **Book a call** (coral). The sticky footer repeats it. |
 
 #### Three levels of detail
 
@@ -341,7 +341,7 @@ The most important screen: one night's results. It is the Reports tab's page (se
 #### The interactive chart (in sheets and the night report)
 
 - **What it shows:**
-  - the sound level every 20 seconds, as one filled shape in the orange loudness ramp (light at the base, deep at the top; never a rainbow, never red);
+  - the sound level every 20 seconds, as one filled shape through the loudness ramp (cyan at the base, red only for very loud snoring); every other snoring and breathing amount on the page and in its sheets uses the same ramp;
   - a row of events above the plot, each its own shape: breathing pause (purple pill), cough (white diamond), movement (grey ring);
   - a readout above the chart: the loudest moment in view, or the time and level at the playhead, naming any event there.
 - **Touch:**
