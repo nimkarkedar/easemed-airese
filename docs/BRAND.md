@@ -233,9 +233,9 @@ Easmed's medical B2B tools and Airese show the same data, but they're built diff
 - Comparison bars: tonight in the data colour, earlier nights in neutral grey (faded Ember turns muddy on Deep).
 - Charts always label or shape their marks too, so colour is never the only cue.
 - **Graphs behind text** (the verdict card) keep a readability budget: everything behind the words together (card gradient, glow, fill, line, shine) must leave Moon body text at 7:1 or more. Strengthen the graph only where there's no text.
-- **Status marks** on a night's headline: Dew ✓ for steady, Lamp ↗ for unusual, Flare 👁 for "worth a closer look" (a repeated pattern only). The verdict card itself changes colour with the night (Oct 2026): blue when ordinary, a subtle warm dusk when unusual, wine into plum with a slowly breathing Flare glow for a repeated pattern.
+- **The verdict card** changes colour with the night (Oct 2026): blue when ordinary, a subtle warm dusk when unusual, wine into plum with a slowly breathing Flare glow for a repeated pattern. Behind the words, the week as a graph in Breath, Lamp or Flare, and one button: Breath, Lamp, or the coral `urgentAction`. No status icons or dial: the words and the graph carry it.
 
-Lamp is the only warm UI colour. **One red, Flare `#FF5A4F`**, used in two places only: the loudest snoring in charts (`loudness.veryLoud`), and form-error marks (`errorMark`: the field ring and icon). Error text uses a light tint of it (`error` `#FFA49B`, 7.5:1 on Deep, 10:1 on Midnight) to keep AAA contrast. Never red for headlines, status marks or written results: the words stay calm.
+Lamp is the only warm UI colour. **One red, Flare `#FF5A4F`**, used for marks only: the loudest snoring in charts (`loudness.veryLoud`), the repeated-pattern graph line, and form-error marks (`errorMark`: the field ring and icon). Error text uses a light tint of it (`error` `#FFA49B`, 7.5:1 on Deep, 10:1 on Midnight) to keep AAA contrast. Never red for headlines, status marks or written results: the words stay calm.
 
 **One exception for buttons (Oct 2026): `urgentAction` `#FF7F72`**, Flare lightened to a coral, for the single care action on a repeated pattern (**Book a call** on the verdict card). It is the top of the escalation ladder, so the button carries the urgency and the words stay calm. Midnight label at 7.7:1 (AAA), 5.3:1 against the wine card. Nowhere else.
 
@@ -244,25 +244,26 @@ Lamp is the only warm UI colour. **One red, Flare `#FF5A4F`**, used in two place
 | Use | Font |
 | --- | --- |
 | Headings | **Montserrat** (semibold) |
-| Buttons | **Montserrat** (medium) |
+| Buttons | **Montserrat** (regular) |
 | Body | **Inter** |
-| Data (times, durations) | **Monospace**, often in Lamp: `2:14 am · 42 min` |
+| Data (times, durations) | **Inter** with tabular figures. (A monospace data face is still an open question, §5.) |
 
 **Screen edges:** one standard side inset of **20 pt** on every screen (`space.gutter`). Cards and controls sit inside it.
 
 **Type scale** (`type` in `src/theme/tokens.ts`). The base is 16 and the steps are about 1.25×. Reading text has a line height of at least 1.5×. **No text smaller than 12.**
 
-| Style | Size / line height | Weight | Use |
-| --- | --- | --- | --- |
-| `title` | 32 / 40 | SemiBold | Rare, big single statements |
-| `headline` | 24 / 32 | SemiBold | Screen headline (onboarding) |
-| `heading` | 20 / 28 | SemiBold | Section and sheet titles |
-| `body` | **16 / 24** | Regular | Base: all reading text |
-| `small` | 14 / 22 | Regular | Secondary detail |
-| `caption` | 12 / 18 | Regular | The minimum: credits, fine print |
-| `button` | 16 / 20 | Regular | Button labels (Midnight on Breath, 9.4:1) |
+| Style | Font | Size / line height | Weight | Use |
+| --- | --- | --- | --- | --- |
+| `title` | Montserrat | 32 / 40 | SemiBold | Page titles, big numbers |
+| `headline` | Montserrat | 24 / 32 | SemiBold | Screen headline (onboarding) |
+| `heading` | Montserrat | 20 / 28 | SemiBold | Section and sheet titles |
+| `body` | Inter | **16 / 24** | Regular | Base: all reading text |
+| `small` | Inter | 14 / 22 | Regular | Secondary detail |
+| `caption` | Inter | 12 / 18 | Regular | The minimum: credits, fine print |
+| `button` | Montserrat | 16 / 20 | Regular | Button labels (Midnight on Breath, 9.4:1) |
+| `buttonSmall` | Montserrat | 14 / 18 | Regular | Mini buttons in banners and cards |
 
-**Two weights only: regular and semibold** (Oct 2026). Recording Details uses four sizes: `title` 32 (page title, big numbers), `heading` 20 (card and sheet titles), `body` 16, `small` 14. Big numbers are one size and weight, with no small units; durations use the compact `7h 36m`.
+**Two weights only: regular and semibold** (Oct 2026). Section labels are one style everywhere (`FormTitle`). Recording Details uses four sizes: `title` 32 (page title, big numbers), `heading` 20 (card and sheet titles), `body` 16, `small` 14. Big numbers are one size and weight, with no small units; durations use the compact `7h 36m`.
 
 ### Accessibility: WCAG 2.2 AAA
 
@@ -319,8 +320,12 @@ Also: `ambient` (9 s sine loop, for background breathing), `attention` (1.8 s la
 | Onboarding: illustration fading in | slow |
 | Onboarding: Next / Continue buttons | none (part of the page; they swipe with the text) |
 | Permission screens: graphic | none (there on load) |
-| Bottom sheet: appearing and closing | fast |
-| Bottom sheet: settling back after a short drag | fast |
+| Bottom sheet and top sheet: appearing and closing | fast |
+| Bottom sheet and top sheet: settling back after a short drag | fast |
+| Home banner: the next message fading in | fast |
+| Recording: the screen surfacing out of the record button's blue | slow |
+| Verdict card: the graph drawn by a shine, then the occasional shine | glint |
+| Verdict card, repeated pattern: the glow breathing | attention |
 
 Overlap steps instead of chaining them, so motion flows. Swipes and scrolls follow the finger, with no easing. Respect the system Reduce Motion setting.
 

@@ -150,7 +150,7 @@ export function RecordingScreen({
           <AppText variant="title" color="white" accessibilityRole="header">
             Recording…
           </AppText>
-          {/* Smart listening, with (i) for how recording works */}
+          {/* What's happening, with (i) for how recording works */}
           <View style={styles.subtitle}>
             <AppText color="textMuted" style={{ flex: 1 }}>
               Listening privately, on this phone.

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, RadialGradient, Circle, Stop } from 'react-native-svg';
-import { colors, gradients, motion, space, useReducedMotion } from '../theme';
+import { colors, gradients, motion, radius, space, useReducedMotion } from '../theme';
 import { AppText } from './AppText';
 import { Icon } from './Icon';
 
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     marginTop: space.sm,
     paddingHorizontal: space.md,
     paddingVertical: space.xs,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.divider,
   },

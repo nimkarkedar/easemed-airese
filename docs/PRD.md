@@ -256,7 +256,7 @@ The full rule set and its reasons are in [RECORDING.md](RECORDING.md).
 | Scheduled start | None: iOS and Android 14+ don't allow switching the microphone on from the background. |
 | Alarm | None. Airese doesn't wake anyone. |
 
-**The Recording Sleep screen:**
+**The Recording screen ("Recording…"):**
 
 - **Title:** "Recording…", then "Listening privately, on this phone." with an (i): "How recording works" / "Airese listens through your phone's microphone, even with the screen locked. It keeps short moments of snoring and breathing, and works out your night on this phone. Nothing leaves it unless you choose to share."
 - **Tips carousel**: a very light frosted box with a soft shadow, one short line at a time (swipe, or tap the dashes):
@@ -286,9 +286,9 @@ The most important screen: one night's results. It is the Reports tab's page (se
 | Processing | Straight after stopping | "Looking through your night" / "Finding the moments worth showing you." with a soft progress shimmer. No empty cards. |
 | Couldn't hear clearly | Poor audio | "We couldn't hear enough last night" / "Try your phone closer to the bed." Privacy footer. No scores. |
 | First night | No history yet | Proof first: the night in sound comes **before** the scores. No comparisons. "Your first night" note instead of recent nights. |
-| Ordinary | Close to usual | "A steadier night". Status mark: Dew check. |
-| Unusual | One night out of the ordinary | "More snoring than usual". Status mark: Lamp arrow. |
-| Repeated pattern | The same thing on many recent nights | "Worth a closer look". Status mark: Lamp eye. Footer becomes **Talk to a sleep care team**. |
+| Ordinary | Close to usual | "A steadier night". Blue card, low calm graph, **Keep tracking**. |
+| Unusual | One night out of the ordinary | "More snoring than usual". Warm dusk card, climbing Lamp graph, **Try using a remedy**. |
+| Repeated pattern | The same thing on many recent nights | "Worth a closer look". Wine card, drawn Flare climb, **Book a call** (coral). The sticky footer becomes **Book a call with a sleep care team**. |
 
 #### Three levels of detail
 
@@ -480,12 +480,12 @@ Full detail in [BRAND.md](BRAND.md).
 
 | Area | Rule |
 | --- | --- |
-| Colour | "Night, with one warm light." Midnight background, Deep cards, Moon text, Breath accent, Lamp for the one key highlight. Data colours: Ember for snoring, Iris for breathing, Dew for sleep. Loudness: one orange ramp, light to deep. **Red is for form errors only**, never for sleep data. |
-| Type | Montserrat, two weights (regular and semibold). Results use four sizes: 32, 20, 16, 14. Nothing under 12 pt. Big numbers have no small units ("7h 36m"). |
+| Colour | "Night, with one warm light." Midnight background, Deep cards, Moon text, Breath accent, Lamp for the one key highlight. Data colours: Ember for snoring, Iris for breathing, Dew for sleep. Loudness: cyan, yellow, orange, Flare red, pinned to decibels (charts only). **One red, Flare**, for marks only (loudest snoring, the pattern graph, form-error marks), plus one coral button, Book a call on a repeated pattern. See-through tints use `alpha()`. |
+| Type | Montserrat for titles and buttons, Inter for reading text; two weights (regular and semibold). Results use four sizes: 32, 20, 16, 14. Nothing under 12 pt. Big numbers have no small units ("7h 36m"). |
 | Icons | Material Symbols (Outlined), through the `Icon` component only. |
-| Motion | Two presets only, `slow` and `fast`, each with ease-out, ease-in and ease-in-out curves. No snapping, bouncing or overshoot. Reduce Motion is always respected. |
+| Motion | Two presets, `slow` and `fast`, each with ease-out, ease-in and ease-in-out curves, plus `ambient`, `attention`, `glint` and `stagger` helpers. No snapping, bouncing or overshoot. Reduce Motion is always respected. |
 | Accessibility | WCAG 2.2 AAA: 7:1 text contrast, 44 pt targets, every chart has a text alternative, colour is never the only cue (shapes and words too), every gesture has a one-finger alternative (e.g. zoom buttons for pinch). |
-| Templates | DetailPage (sticky back, compact title, optional sticky footer), DataCard (wide and square), LargeSheet (near full-screen), BottomSheet and ExplainSheet (small), grouped forms (iOS Settings style). |
+| Templates | PageTitle (every tab's title row), DetailPage (sticky back or tab page, compact title, optional sticky footer), VerdictCard, DataCard (wide and square), LargeSheet (near full-screen), BottomSheet, TopSheet and ExplainSheet (small), grouped forms (iOS Settings style). Full list: design-system/README.md. |
 
 ---
 

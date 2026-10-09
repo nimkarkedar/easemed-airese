@@ -363,24 +363,6 @@ export function nightState(night: Night, override?: string): NightState {
   return sampleState(night, sampleNights());
 }
 
-/**
- * A small status mark for a night's headline (list rows, summary card): a calm, colour-coded icon.
- * Never red, never alarming: Dew for steady, Lamp (the warm light) for "look at this".
- */
-export type StatusMark = { icon: 'check_circle' | 'trending_up' | 'visibility' | 'bedtime'; color: 'dataSleep' | 'lamp' | 'flare' | 'textMuted' };
-export function statusMark(state: NightState): StatusMark {
-  switch (state) {
-    case 'unusual':
-      return { icon: 'trending_up', color: 'lamp' };
-    case 'pattern':
-      return { icon: 'visibility', color: 'flare' }; // Flare: the one urgent mark, only for a repeated pattern
-    case 'steady':
-      return { icon: 'check_circle', color: 'dataSleep' };
-    default:
-      return { icon: 'bedtime', color: 'textMuted' };
-  }
-}
-
 /** Compact duration for big numbers: "7h 36m", "36m". One size, no small units. */
 export function shortDuration(minutes: number) {
   const h = Math.floor(minutes / 60);

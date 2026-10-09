@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions
 import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js';
 import { COUNTRIES, LAUNCH_COUNTRIES, countryByCode, dialCode, flag, type Country } from '../lib/countries';
 import { formatPhone } from '../lib/profile';
-import { colors, space, type } from '../theme';
+import { colors, radius, space, type } from '../theme';
 import { AppText } from './AppText';
 import { BottomSheet } from './BottomSheet';
 import { FormInput } from './Form';
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     marginTop: space.lg,
     marginBottom: space.sm,
     paddingHorizontal: space.md,
-    borderRadius: 12,
+    borderRadius: radius.md,
     backgroundColor: colors.background,
   },
   searchInput: { ...type.body, flex: 1, minWidth: 0, alignSelf: 'stretch', color: colors.text, outlineStyle: 'none' } as object,

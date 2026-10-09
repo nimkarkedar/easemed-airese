@@ -7,7 +7,8 @@
  *
  * Runs as part of `npm run preview`, so it's published to GitHub Pages with the prototype:
  * https://nimkarkedar.github.io/easemed-airese/design-system/
- * Also refreshes design-system/img/ (logos on a Midnight tile) used by design-system/README.md.
+ * Also refreshes design-system/img/ (logos on a Midnight tile) and design-system/swatches/ (one SVG per
+ * colour token, loudness step and gradient, written from tokens.ts) used by design-system/README.md.
  */
 import { copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -66,6 +67,7 @@ const preset = (name) => {
 const presets = [preset('slow'), preset('fast')];
 const ambient = Number(motionSrc.match(/ambient: \{ duration: (\d+)/)[1]);
 const attention = motionSrc.match(/attention: \{ duration: (\d+), rest: (\d+)/);
+const glint = motionSrc.match(/glint: \{ duration: (\d+), rest: (\d+)/);
 const stagger = Number(motionSrc.match(/stagger: (\d+)/)[1]);
 
 const iconSrc = read('src/components/Icon.tsx');
@@ -111,38 +113,46 @@ const BLURB = {
   "AppText": "The only text component. Applies a type style and colour; scales to 200%.",
   "Icon": "A Material Symbol by name, size and colour token.",
   "Logo": "The stacked Airese logo.",
-  "PageTitle": "Large title for tab screens, with an optional control on the right (the avatar).",
-  "DetailPage": "Page opened from a row: back button, large title, sticky compact title on scroll, optional sticky footer.",
+  "PageTitle": "Large title for a tab's page, the same on every tab, with a control on the right (Home: avatar; Reports: calendar).",
+  "DetailPage": "Page template: back button (or none on a tab page), large title, subtitle with an optional tag, top-right control, sticky compact title on scroll, optional sticky footer.",
   "AmbientGradient": "The splash blues with two faint glows drifting across. Static with Reduce Motion.",
   "TabBar": "Floating two-tab bar for web and the preview. Native builds use the system tab bar.",
   "Screen": "Background, safe areas and status bar for a full screen.",
-  "Button": "Pill button, 48 pt. Primary: Breath fill. Quiet: text only.",
+  "Button": "Pill button, 48 pt. Primary: Breath fill. Quiet: text only. Mini: a small Midnight pill for banners and cards.",
   "IconButton": "Round 56 pt Breath button with an icon. Needs an accessibility label.",
   "InfoButton": "The (i) that opens an explanation.",
-  "Avatar": "44 pt circle with initials, or a person icon. Opens Profile.",
+  "Avatar": "44 pt glassy circle with initials, or a person icon. Opens Profile. Exports titleControl, the look shared with the Reports calendar button.",
   "ToggleChip": "Pill that switches on and off. Reads as a checkbox.",
   "ChipGroup": "Wraps chips across lines.",
   "SettingSwitch": "A label and a switch. Greyed out when disabled.",
   "SegmentedControl": "iOS-style segmented control with a sliding Breath thumb.",
-  "FormGroup": "Grouped form card with a title and footer. Outlines on focus and on error.",
+  "FormGroup": "Grouped form card with a title and footer. Outlines on focus and on error. onSheet for use inside a sheet.",
+  "FormTitle": "The one section label: small, uppercase, Mist, 1 pt tracking.",
+  "PhoneField": "Phone number with a flag and country-code chip; formats as you type. Exports CountrySheet (searchable, Singapore and Malaysia first).",
+  "Checkbox": "A 44 pt checkbox with a sentence beside it that can hold inline links (InlineLink).",
+  "WheelPicker": "A scroll wheel for one number from a range (year of birth). Tap a row or swipe; adjustable for screen readers.",
+  "RulerPicker": "A ruler to drag under a needle (height, weight), with − / + and a number you can type.",
+  "AboutYou": "Gender, age, height, weight and where you live as tiles; each opens a small sheet for that one question.",
   "FormInput": "A plain text input row.",
   "FormDivider": "Hairline between rows.",
   "SettingRow": "Row with icon, title and detail. Chevron opens a page; an action pill acts in place.",
-  "SettingsCard": "Breath-outlined card of rows (Home).",
-  "SettingsRow": "Row in a SettingsCard: icon, title, detail, trailing hint, optional caution mark.",
   "Card": "Deep surface with optional title and (i).",
-  "InsightCard": "A plain-language takeaway. Tones: plain, hero (the verdict), warm (what it means).",
+  "InsightCard": "A plain-language takeaway. Tones: plain, hero (a no-data night), warm (what it means).",
+  "VerdictCard": "The night's verdict: headline, a sentence, one button by mood, and the week as a graph behind the words within a 7:1 contrast budget, drawn on load by a shine.",
   "DataCard": "Results card in two shapes, wide and square: label, visual or number, one line of insight.",
   "BigNumber": "The big number in a card. No small units.",
   "ScoreTile": "Headline score: a ring with the number or an icon, the name, a level word, a trend.",
   "BottomSheet": "Sheet over a dimmed screen. Tap outside or drag down to close.",
   "ExplainSheet": "Short explanation in a sheet, with an optional action.",
+  "TopSheet": "The bottom sheet's twin, dropping down from the top (the Reports calendar). Drag up or tap outside to close.",
   "LargeSheet": "Near full-height sheet for “more” on a card.",
   "PermissionSheet": "Asks again for a permission, or points to Settings if the system won’t ask.",
   "Toast": "Short confirmation that fades in and out.",
   "SystemAlertHost": "Browser preview only: stands in for the iOS permission alert.",
   "RecordDial": "The record button in a ring of ticks. Tap to start.",
   "ListeningRing": "Stop button inside bars that move with the sound level.",
+  "TipCarousel": "A few one-line tips in a light frosted box, one at a time; swipe or tap the dashes.",
+  "MonthCalendar": "A month of nights, each ringed by its Sound Score; ‹ › for months, tap the title for a month and year grid.",
   "SnoringChart": "The night’s sound level against a dB scale, with events marked above. Overview: tap to pick a moment. Explore: playhead, zoom.",
   "NightTimeline": "Snoring bars, breathing ticks and an asleep line across the night; optional clip rings.",
   "ScoreRing": "Ring filled to a fraction, with an icon or number inside.",
@@ -153,21 +163,21 @@ const BLURB = {
   "ComparisonIndicator": "Trend arrow with words: more, about or less than usual.",
   "ClipPlayer": "Large clip player: waveform with pause and loud-breath marks, scrubber, play/pause.",
   "AudioSnippet": "Compact clip row with play/pause and a small waveform.",
-  "CareCTA": "Sticky next step: “Keep tracking”, or “Talk to a sleep care team” for a repeated pattern.",
-  "PrivacyFooter": "“Private by design” page footer."
+  "PrivacyFooter": "“Private by default” page footer: a large lock and one line."
 };
 
 const GROUPS = [
   ['Foundations', [['AppText'], ['Icon'], ['Logo']]],
   ['Page structure and templates', [['PageTitle'], ['DetailPage'], ['AmbientGradient'], ['TabBar'], ['Screen']]],
   ['Buttons and controls', [['Button'], ['IconButton'], ['InfoButton'], ['Avatar'], ['ToggleChip', 'ToggleChip'], ['ChipGroup', 'ToggleChip'], ['SettingSwitch', 'SettingRows'], ['SegmentedControl']]],
-  ['Forms and rows', [['FormGroup', 'Form'], ['FormInput', 'Form'], ['FormDivider', 'Form'], ['SettingRow', 'SettingRows'], ['SettingsCard'], ['SettingsRow', 'SettingsCard']]],
-  ['Cards', [['Card'], ['InsightCard'], ['DataCard'], ['BigNumber', 'DataCard'], ['ScoreTile']]],
-  ['Sheets and feedback', [['BottomSheet'], ['ExplainSheet'], ['LargeSheet'], ['PermissionSheet'], ['Toast'], ['SystemAlertHost']]],
-  ['Recording', [['RecordDial'], ['ListeningRing']]],
+  ['Forms and rows', [['FormGroup', 'Form'], ['FormTitle', 'Form'], ['FormInput', 'Form'], ['FormDivider', 'Form'], ['PhoneField'], ['Checkbox'], ['WheelPicker', 'Pickers'], ['RulerPicker', 'Pickers'], ['AboutYou'], ['SettingRow', 'SettingRows']]],
+  ['Cards', [['Card'], ['VerdictCard'], ['InsightCard'], ['DataCard'], ['BigNumber', 'DataCard'], ['ScoreTile']]],
+  ['Sheets and feedback', [['BottomSheet'], ['TopSheet'], ['ExplainSheet'], ['LargeSheet'], ['PermissionSheet'], ['Toast'], ['SystemAlertHost']]],
+  ['Recording', [['RecordDial'], ['ListeningRing'], ['TipCarousel']]],
+  ['Reports', [['MonthCalendar']]],
   ['Data visualisation', [['SnoringChart'], ['NightTimeline'], ['ScoreRing'], ['BenchmarkScale'], ['HourlyBars'], ['LoudnessBars'], ['RecentNightsChart'], ['ComparisonIndicator']]],
   ['Audio', [['ClipPlayer'], ['AudioSnippet']]],
-  ['Recording Details parts', [['CareCTA'], ['PrivacyFooter']]],
+  ['Recording Details parts', [['PrivacyFooter']]],
 ];
 const components = GROUPS.map(([group, items]) => ({
   group,
@@ -198,6 +208,18 @@ const tile = (file, w, h, pad) => {
 writeFileSync(join(root, 'design-system/img/logo-stacked.svg'), tile('airese-logo.svg', 160, 160, 24));
 const hv = read('assets/brand/airese-logo-hori.svg').match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
 writeFileSync(join(root, 'design-system/img/logo-horizontal.svg'), tile('airese-logo-hori.svg', 260, Math.round((260 * (Number(hv[2]) + 48)) / (Number(hv[1]) + 48)), 24));
+
+// Swatches for design-system/README.md, written from the tokens on every run (so they can't drift).
+mkdirSync(join(root, 'design-system/swatches'), { recursive: true });
+const kebab = (n) => n.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase());
+const chipSvg = (fill) => `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="28" viewBox="0 0 56 28"><rect width="56" height="28" rx="6" fill="#0B1020"/><rect x="0.5" y="0.5" width="55" height="27" rx="6" fill="${fill}" stroke="#8892a6" stroke-opacity="0.5"/></svg>`;
+const gradSvg = (stops, w = 56, vertical = true) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="28"><defs><linearGradient id="g"${vertical ? ' x1="0" y1="0" x2="0" y2="1"' : ''}>${stops.map((x) => `<stop offset="${x.offset}" stop-color="${x.color}"/>`).join('')}</linearGradient></defs><rect x="0.5" y="0.5" width="${w - 1}" height="27" rx="6" fill="url(#g)" stroke="#8892a6" stroke-opacity="0.5"/></svg>`;
+for (const p of palette) writeFileSync(join(root, `design-system/swatches/${kebab(p.name)}.svg`), chipSvg(p.hex));
+for (const c of colorLines) if (!hexOf[c.name]) writeFileSync(join(root, `design-system/swatches/${kebab(c.name)}.svg`), chipSvg(c.value));
+for (const l of loudness) writeFileSync(join(root, `design-system/swatches/loud-${kebab(l.name)}.svg`), chipSvg(l.hex));
+writeFileSync(join(root, 'design-system/swatches/loudness-ramp.svg'), gradSvg(loudness.map((l, i) => ({ offset: i / (loudness.length - 1), color: l.hex })), 200, false));
+for (const g of gradients) writeFileSync(join(root, `design-system/swatches/gradient-${kebab(g.name)}.svg`), gradSvg(g.stops));
 
 // ---------- Page ----------
 
@@ -342,7 +364,7 @@ const html = `<!doctype html>
 
 <section id="colour">
   <h2>Colour</h2>
-  <p class="muted">Dark UI with one warm accent. One red, Flare: form errors and the loudest snoring in charts. Contrast ratios are against Midnight.</p>
+  <p class="muted">Dark UI with one warm accent. One red, Flare: form errors and the loudest snoring in charts, plus one coral button (<code>urgentAction</code>, Book a call on a repeated pattern). See-through tints are written <code>alpha(colors.x, 0.16)</code>. Contrast ratios are against Midnight.</p>
   <h3>Palette</h3>
   <div class="grid">${palette.map((p) => swatch(p.hex, p.name[0].toUpperCase() + p.name.slice(1), p.note, Number(contrast(p.hex)) >= 3 ? `<span class="ratio">${contrast(p.hex)}:1 on Midnight</span>` : '')).join('')}</div>
   <h3>Roles and special colours</h3>
@@ -357,17 +379,18 @@ const html = `<!doctype html>
       swatch(
         `linear-gradient(180deg, ${g.stops.map((s) => `${s.color} ${s.offset * 100}%`).join(', ')})`,
         g.name,
-        g.name === 'splash' ? 'Splash, Home, Recording, record button' : 'Verdict card',
+        g.name === 'splash' ? 'Splash, Home, Recording, record button' : g.name === 'hero' ? 'Verdict card, ordinary night' : g.name === 'heroWatch' ? 'Verdict card, unusual night' : 'Verdict card, repeated pattern',
       ),
     )
     .join('')}</div>
-  <h3>Status marks</h3>
-  <div class="scroll"><table><thead><tr><th>Night</th><th>Icon</th><th>Colour</th></tr></thead><tbody>
-    <tr><td>Ordinary</td><td><code>check_circle</code></td><td>Dew</td></tr>
-    <tr><td>Unusual</td><td><code>trending_up</code></td><td>Lamp</td></tr>
-    <tr><td>Repeated pattern</td><td><code>visibility</code></td><td>Lamp</td></tr>
-    <tr><td>First night, other</td><td><code>bedtime</code></td><td>Mist</td></tr>
+  <h3>Verdict moods</h3>
+  <p class="muted">The verdict card on a report: card colours, the graph behind the words, and the one button.</p>
+  <div class="scroll"><table><thead><tr><th>Night</th><th>Card</th><th>Graph line</th><th>Button</th></tr></thead><tbody>
+    <tr><td>Ordinary, first night</td><td><code>gradients.hero</code></td><td>Breath, low and nearly flat</td><td>Keep tracking · Breath</td></tr>
+    <tr><td>Unusual</td><td><code>gradients.heroWatch</code></td><td>Lamp, climbing to tonight</td><td>Try using a remedy · Lamp</td></tr>
+    <tr><td>Repeated pattern</td><td><code>gradients.heroUrgent</code></td><td>Flare, a drawn climb across the card</td><td>Book a call · <code>urgentAction</code></td></tr>
   </tbody></table></div>
+  <p class="muted" style="margin-top:12px">Behind the words the graph stays within a readability budget: Moon body text keeps 7:1 or more at the card's brightest point.</p>
 </section>
 
 <section id="type">
@@ -391,7 +414,7 @@ const html = `<!doctype html>
     <tr><td>Touch target</td><td>44 pt minimum. Buttons 48, icon buttons 56, rows 64</td></tr>
     <tr><td>Sticky top bar</td><td>44 pt below the status bar (<code>DetailPage</code>)</td></tr>
     <tr><td>Tab bar clearance</td><td>96 pt (<code>TAB_BAR_CLEARANCE</code>)</td></tr>
-    <tr><td>Depth</td><td>No shadows. Breath glow on the record button and verdict card; frosted sticky bars.</td></tr>
+    <tr><td>Depth</td><td>No shadows. A soft glow on the record button and verdict card; frosted sticky bars; a soft shadow under the Recording tips box.</td></tr>
   </tbody></table></div>
 </section>
 
@@ -414,6 +437,7 @@ const html = `<!doctype html>
   <div class="scroll"><table><tbody>
     <tr><td><code>motion.ambient</code></td><td>${ambient} ms, sine in-out</td><td class="muted">Gradient drift, record button breathing</td></tr>
     <tr><td><code>motion.attention</code></td><td>${attention[1]} ms, then ${attention[2]} ms rest</td><td class="muted">Light that runs round the record ring</td></tr>
+    <tr><td><code>motion.glint</code></td><td>${glint[1]} ms, then ${glint[2]} ms rest</td><td class="muted">A tiny shine that draws the verdict card's graph on load, then glides along it now and then</td></tr>
     <tr><td><code>motion.stagger</code></td><td>${stagger} ms</td><td class="muted">Delay between steps</td></tr>
   </tbody></table></div>
   <p class="muted" style="margin-top:16px">Reduce Motion: fades instead of slides, no loops, charts drawn at once.</p>
@@ -443,9 +467,9 @@ const html = `<!doctype html>
   </div>
   <h3>Illustrations</h3>
   <div class="images">
-    <figure><img src="img/1-hear.jpg" alt="" loading="lazy"><figcaption>Onboarding 1: Know your sleep</figcaption></figure>
-    <figure><img src="img/2-private.jpg" alt="" loading="lazy"><figcaption>Onboarding 2: Completely private</figcaption></figure>
-    <figure><img src="img/3-pattern.jpg" alt="" loading="lazy"><figcaption>Onboarding 3: Actionable insights</figcaption></figure>
+    <figure><img src="img/1-hear.jpg" alt="" loading="lazy"><figcaption>Onboarding 1: Let’s find out what happens while you sleep</figcaption></figure>
+    <figure><img src="img/2-private.jpg" alt="" loading="lazy"><figcaption>Onboarding 2: Private by default</figcaption></figure>
+    <figure><img src="img/3-pattern.jpg" alt="" loading="lazy"><figcaption>Onboarding 3: A clearer next step</figcaption></figure>
     <figure><img src="img/microphone.png" alt="" loading="lazy"><figcaption>Microphone permission</figcaption></figure>
     <figure><img src="img/notifications.png" alt="" loading="lazy"><figcaption>Notifications permission</figcaption></figure>
   </div>
@@ -478,10 +502,13 @@ const html = `<!doctype html>
     <tr><td>Editing</td><td>Changes save on Save; Back discards them.</td></tr>
     <tr><td>Destructive actions</td><td>Confirm in a sheet, then a toast.</td></tr>
     <tr><td>Permissions</td><td>Ask in onboarding; ask again in context with <code>PermissionSheet</code>.</td></tr>
-    <tr><td>Empty states</td><td>Icon, heading, one sentence on what to do.</td></tr>
+    <tr><td>Empty states</td><td>Heading, one sentence on what to do, one action.</td></tr>
     <tr><td>Charts</td><td>A sentence above each chart. Shapes in legends. A text alternative.</td></tr>
     <tr><td>Numbers</td><td>No small units. Levels are words, not colour alone.</td></tr>
-    <tr><td>Brand</td><td>Logo in Mist with “Powered by The Air Station” at the end of Profile and Our centres.</td></tr>
+    <tr><td>One message</td><td>Home shows one banner message at a time, by priority, with its action under the text.</td></tr>
+    <tr><td>Tabs</td><td>Every tab's page uses <code>PageTitle</code>'s row: same title, position and glassy control.</td></tr>
+    <tr><td>Graphs behind text</td><td>Everything behind the words must leave body text at 7:1 or more; strengthen the graph only where there's no text.</td></tr>
+    <tr><td>Brand</td><td>Logo in Mist with “Powered by The Air Station” on the splash and at the end of Profile and Our centres.</td></tr>
   </tbody></table></div>
 </section>
 

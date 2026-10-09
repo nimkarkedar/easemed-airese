@@ -28,7 +28,6 @@ export function InsightCard({
   tone = 'plain',
   iconColor = 'lamp',
   visual,
-  badge,
   mood = 'calm',
   children,
 }: {
@@ -42,8 +41,6 @@ export function InsightCard({
   /** Icon colour: Lamp by default; a status mark passes its own (e.g. Dew for a steady night). */
   iconColor?: ColorName;
   visual?: React.ReactNode;
-  /** A small picture in place of the icon, read first (e.g. the urgency dial). */
-  badge?: React.ReactNode;
   mood?: 'calm' | 'watch' | 'urgent';
   children?: React.ReactNode;
 }) {
@@ -51,11 +48,11 @@ export function InsightCard({
     <Card style={tone === 'warm' ? styles.warm : tone === 'hero' ? styles.hero : undefined}>
       {tone === 'hero' && <HeroBackground mood={mood} />}
       <View style={styles.row}>
-        {badge ?? (icon ? (
+        {icon ? (
           <View style={{ marginTop: 2 }}>
             <Icon name={icon} size={24} color={iconColor} />
           </View>
-        ) : null)}
+        ) : null}
         <View style={{ flex: 1 }}>
           <View style={styles.titleRow}>
             <AppText variant="heading" color="text" accessibilityRole="header" style={{ flex: 1 }}>

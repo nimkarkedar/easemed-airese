@@ -17,7 +17,6 @@ export * from './ListeningRing';
 export * from './AmbientGradient';
 
 export * from './PageTitle';
-export * from './SettingsCard';
 export * from './PermissionSheet';
 export * from './ToggleChip';
 export * from './DetailPage';
@@ -34,7 +33,6 @@ export * from './ScoreRing';
 export * from './BenchmarkScale';
 export * from './HourlyBars';
 export * from './LoudnessBars';
-export * from './UrgencyGauge';
 export * from './ClipPlayer';
 export * from './ScoreTile';
 export * from './SnoringChart';

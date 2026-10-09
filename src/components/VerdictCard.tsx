@@ -189,8 +189,7 @@ function Glint({ t, points, color, dimAbove, dim }: { t: Animated.Value; points:
   // Distance along the line at each point, as a fraction of the whole: the dot moves at an even pace.
   const lengths = points.map((p, i) => (i ? Math.hypot(p.x - points[i - 1].x, p.y - points[i - 1].y) : 0));
   const total = lengths.reduce((a, b) => a + b, 0) || 1;
-  let run = 0;
-  const at = lengths.map((l) => (run += l) / total);
+  const at = lengths.map((_, i) => lengths.slice(0, i + 1).reduce((a, b) => a + b, 0) / total);
 
   return (
     <Animated.View
